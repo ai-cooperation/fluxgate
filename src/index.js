@@ -47,7 +47,7 @@ export default {
 
     // MCP — GET 開 SSE 流；POST 走 JSON-RPC（claude.ai HTTP+SSE transport）
     if ((path === "/sse" || path === "/mcp") && request.method === "GET") return handleMcpSSE(request, env);
-    if (path === "/mcp" || path === "/mcp/messages" || path === "/sse") return handleMcpRpc(request, env);
+    if (path === "/mcp" || path === "/mcp/messages" || path === "/sse") return handleMcpRpc(request, env, ctx);
 
     // REST 生圖
     if (path === "/generate" && request.method === "POST") {
