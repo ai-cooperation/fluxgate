@@ -92,16 +92,16 @@ export const PAGE = `<!DOCTYPE html>
   <div class="card">
     <h2>取得 API Key</h2>
     <div class="row">
-      <input id="label" placeholder="你的名稱或 email（用於識別）" />
+      <input id="email" type="email" placeholder="輸入 email 以開通會員（僅檢查格式，不寄信驗證）" />
       <button id="reg" onclick="getKey()">免費取得</button>
     </div>
     <div class="hint">免註冊可在本站試縮圖（512×288，每 5 分鐘 1 張）。取得 key 升會員（720p，每日 20 張）。VIP（FHD 1920×1080，每日 50 張）請聯絡老師。</div>
     <div class="keybox" id="keybox">
       <span style="font-size:.7rem;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:.3rem">claude.ai 連接器 URL（複製整段，貼到 Remote MCP server URL）</span>
-      <span id="keyval"></span><span class="copy" onclick="copyKey()">複製整段</span>
+      <span id="keyval"></span><span class="copy" onclick="copyKey(this)">複製整段</span>
       <div style="margin-top:.7rem;padding-top:.6rem;border-top:1px solid var(--border);font-size:.74rem;color:var(--muted)">
         REST API 用的 key（X-API-Key）：<code id="rawkey" style="color:var(--text)"></code>
-        <span class="copy2" style="margin-left:.5rem" onclick="copyRaw()">複製 key</span>
+        <span class="copy2" style="margin-left:.5rem" onclick="copyRaw(this)">複製 key</span>
       </div>
     </div>
   </div>
@@ -147,7 +147,7 @@ export const PAGE = `<!DOCTYPE html>
     <div class="keybox show" style="border-color:var(--accent);margin-top:1rem">
       <span style="font-size:.7rem;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:.3rem">連接器 URL（含 key）</span>
       <span id="connurl" style="color:var(--accent)">先在上方取得 key</span>
-      <span class="copy" onclick="copyConn()">複製</span>
+      <span class="copy" onclick="copyConn(this)">複製</span>
     </div>
 
     <div class="steps">
@@ -179,9 +179,9 @@ export const PAGE = `<!DOCTYPE html>
 
     <h3 style="font-size:.95rem;margin:1.25rem 0 .5rem">其他 client 設定（key 已預填）</h3>
     <p class="hint" style="margin-top:0">注意：目前 MCP 為 JSON-RPC request/response 版，claude.ai 等需 SSE 串流的 client <b>未實測</b>，測通請回報，老師會更新。</p>
-    <div class="recipe"><div class="rhead"><span>Claude Desktop（mcp-remote 橋接）</span><span class="copy2" onclick="copyR('rcd')">複製</span></div><pre id="rcd">先取得 key</pre></div>
-    <div class="recipe"><div class="rhead"><span>Cursor（.cursor/mcp.json）</span><span class="copy2" onclick="copyR('rcur')">複製</span></div><pre id="rcur">先取得 key</pre></div>
-    <div class="recipe"><div class="rhead"><span>Codex CLI（~/.codex/config.toml）</span><span class="copy2" onclick="copyR('rcdx')">複製</span></div><pre id="rcdx">先取得 key</pre></div>
+    <div class="recipe"><div class="rhead"><span>Claude Desktop（mcp-remote 橋接）</span><span class="copy2" onclick="copyR('rcd',this)">複製</span></div><pre id="rcd">先取得 key</pre></div>
+    <div class="recipe"><div class="rhead"><span>Cursor（.cursor/mcp.json）</span><span class="copy2" onclick="copyR('rcur',this)">複製</span></div><pre id="rcur">先取得 key</pre></div>
+    <div class="recipe"><div class="rhead"><span>Codex CLI（~/.codex/config.toml）</span><span class="copy2" onclick="copyR('rcdx',this)">複製</span></div><pre id="rcdx">先取得 key</pre></div>
 
     <div class="boxes">
       <div class="okbox"><b>設定成功的判斷</b><ul><li>對話工具列看得到 FluxGate</li><li>說「生一張…」會回一個 /i/ 圖片 URL</li><li>點 URL 看得到圖</li></ul></div>
@@ -207,19 +207,33 @@ function renderMcp(){
   document.getElementById('rcur').textContent = JSON.stringify({mcpServers:{fluxgate:{url:conn}}},null,2);
   document.getElementById('rcdx').textContent = '[mcp_servers.fluxgate]\\nurl = "'+BASE+'/sse?key='+k+'"';
 }
-function copyConn(){ navigator.clipboard.writeText(document.getElementById('connurl').textContent); }
-function copyR(id){ navigator.clipboard.writeText(document.getElementById(id).textContent); }
+function doCopy(text, btn){
+  const ok=()=>{ if(btn){ const o=btn.textContent; btn.textContent='已複製 ✓'; setTimeout(()=>{btn.textContent=o;},1500);} };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(ok).catch(()=>fallbackCopy(text,ok));
+  } else { fallbackCopy(text,ok); }
+}
+function fallbackCopy(text, ok){
+  try{ const ta=document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.focus(); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); ok(); }
+  catch(e){ window.prompt('手動複製：', text); }
+}
+function copyConn(btn){ doCopy(document.getElementById('connurl').textContent, btn); }
+function copyR(id, btn){ doCopy(document.getElementById(id).textContent, btn); }
+function copyKey(btn){ doCopy(BASE+'/sse?key='+myKey, btn); }
+function copyRaw(btn){ doCopy(myKey, btn); }
+function validEmail(e){ return /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(e); }
 renderMcp();
 if (myKey) showKey(myKey, false);
 async function getKey(){
+  const email=document.getElementById('email').value.trim();
+  if(!validEmail(email)){ alert('請輸入有效的 email 格式（例：you@example.com）'); return; }
   const b=document.getElementById('reg'); b.disabled=true; b.textContent='產生中...';
   try{ const r=await fetch('/register',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({label:document.getElementById('label').value||'guest'})});
+        body:JSON.stringify({email})});
     const d=await r.json(); if(d.api_key){ showKey(d.api_key,true);} else alert(d.error||'失敗');
   }catch(e){ alert('錯誤：'+e.message);} b.disabled=false; b.textContent='免費取得';
 }
-function copyKey(){ navigator.clipboard.writeText(BASE+'/sse?key='+myKey); }
-function copyRaw(){ navigator.clipboard.writeText(myKey); }
 async function gen(){
   const intent=document.getElementById('intent').value.trim(); if(!intent)return;
   const b=document.getElementById('go'), pv=document.getElementById('preview');
