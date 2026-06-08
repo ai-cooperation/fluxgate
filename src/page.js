@@ -92,7 +92,7 @@ export const PAGE = `<!DOCTYPE html>
   <div class="card">
     <h2>會員登入</h2>
     <div id="loggedOut">
-      <p class="hint" style="margin-top:0">用 Google 登入即為會員（720p、每日 20 張），跟 cooperation.tw 其他服務同一個帳號。未登入可在下方試縮圖（512×288，每 5 分鐘 1 張）。VIP（FHD 1920×1080、每日 50 張）請聯絡老師開通。</p>
+      <p class="hint" style="margin-top:0">用 Google 登入即為會員（720p、每日 20 張），跟 cooperation.tw 其他服務同一個帳號。未登入可在下方試縮圖（512×288，每 5 分鐘 1 張）。VIP（同 720p，每日 50 張，額度較多）請聯絡老師開通。</p>
       <button id="loginBtn" onclick="window.hubLogin&&window.hubLogin()" style="margin-top:.6rem">使用 Google 登入</button>
     </div>
     <div id="loggedIn" style="display:none">
@@ -118,7 +118,7 @@ export const PAGE = `<!DOCTYPE html>
       <input id="intent" placeholder="輸入白話意圖，例如：高山湖泊日出 / 可愛的橘貓 / 資料中心 AI 核心" />
       <button id="go" onclick="gen()">生圖</button>
     </div>
-    <div class="hint">已登入＝會員畫質（720p / VIP FHD）；未登入＝匿名縮圖（每 5 分鐘 1 張）。</div>
+    <div class="hint">已登入＝會員/VIP 畫質（720p）；未登入＝匿名縮圖（每 5 分鐘 1 張）。</div>
     <div class="preview" id="preview"></div>
   </div>
 
@@ -128,7 +128,7 @@ export const PAGE = `<!DOCTYPE html>
       <tr><th>等級</th><th>解析度</th><th>額度</th><th>如何取得</th></tr>
       <tr><td>匿名</td><td>512×288 縮圖</td><td>網站試用，每 5 分鐘 1 張</td><td>免註冊</td></tr>
       <tr><td>會員</td><td>1280×720 (720p)</td><td>每日 20 張</td><td>上方免費取得</td></tr>
-      <tr><td>VIP</td><td>1920×1080 (FHD)</td><td>每日 50 張</td><td>聯絡老師</td></tr>
+      <tr><td>VIP</td><td>1280×720 (720p)</td><td>每日 50 張</td><td>聯絡老師</td></tr>
     </table>
   </div>
 
@@ -283,7 +283,7 @@ onAuthStateChanged(auth, async (user) => {
       const tok = await user.getIdToken();
       const me = await fetch('/me', { headers: { Authorization: 'Bearer ' + tok } }).then(r => r.json());
       document.getElementById('meEmail').textContent = user.email;
-      document.getElementById('meTier').textContent = (me.tier === 'vip' ? 'VIP（FHD）' : me.tier === 'member' ? '會員（720p）' : me.tier);
+      document.getElementById('meTier').textContent = (me.tier === 'vip' ? 'VIP（720p・額度較多）' : me.tier === 'member' ? '會員（720p）' : me.tier);
     } catch (e) { document.getElementById('meEmail').textContent = user.email; }
     inEl.style.display = 'block'; outEl.style.display = 'none';
   } else {

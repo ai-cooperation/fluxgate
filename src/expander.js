@@ -38,11 +38,11 @@ export const STYLE_PROFILES = {
     suffix: "Shot on Canon EOS R3, 400mm f/2.8, fast shutter freezing the motion with slight panning blur in the background. Hard directional sunlight rim-lights flying sweat and muscle, casting long dramatic shadows. High-contrast vivid grade. In the style of sports photojournalist Neil Leifer." },
 };
 
-// 各 tier 明確尺寸（陳老師定 2026-06-08）：匿名=縮圖 / 會員=720p / VIP=FHD
+// 各 tier 明確尺寸（陳老師定 2026-06-08）：匿名=縮圖 / 會員=720p / VIP 也 720p(只是每日額度多，FHD 太燒 neuron 不給)
 const SIZES = {
-  anonymous: { "16:9": [512, 288], "1:1": [512, 512] },     // 縮圖，只能網站試
-  member:    { "16:9": [1280, 720], "1:1": [720, 720] },    // 720p
-  vip:       { "16:9": [1920, 1080], "1:1": [1080, 1080] }, // FHD
+  anonymous: { "16:9": [512, 288], "1:1": [512, 512] },   // 縮圖，只能網站試
+  member:    { "16:9": [1280, 720], "1:1": [720, 720] },  // 720p，每日 20 張
+  vip:       { "16:9": [1280, 720], "1:1": [720, 720] },  // 720p，每日 50 張（張數多，非更高畫質）
 };
 
 export function dims(tier, ratio) {

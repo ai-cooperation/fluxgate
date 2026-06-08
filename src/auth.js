@@ -1,7 +1,7 @@
 // 三級權限 + 額度（KV）。仿 GemGate 派 key。陳老師定 2026-06-08：
 //   匿名(無 key)：縮圖、只能在網站試、同 IP 每 5 分鐘 1 張、擋直接 API
 //   會員(mk_)   ：720p、每日 20 張
-//   VIP(vk_)    ：FHD、每日 50 張
+//   VIP(vk_)    ：720p、每日 50 張（額度多，非更高畫質；FHD 太燒 neuron 不給）
 // key 資料存 KV：key:<apikey> -> {"tier":"member","label":"..."}
 // 計數：count:<id>:<YYYY-MM-DD>（TTL 2 天）；匿名冷卻：cool:<ip>（TTL 300s）
 

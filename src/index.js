@@ -37,7 +37,7 @@ export default {
         tiers: {
           anonymous: { res: "512x288 縮圖", limit: "網站試用，每 5 分鐘 1 張" },
           member: { res: "1280x720", limit: `每日 ${TIER_QUOTA.member} 張` },
-          vip: { res: "1920x1080", limit: `每日 ${TIER_QUOTA.vip} 張` },
+          vip: { res: "1280x720", limit: `每日 ${TIER_QUOTA.vip} 張` },
         },
       });
     }
