@@ -73,8 +73,28 @@ export default {
     return json({ error: "not found" }, 404);
   },
 
-  // 每日清空舊圖
+  // 每日清空舊圖（失敗發 TG 告警，依 automation 規範。secret 未設則靜默 no-op）
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(purgeOld(env).then((n) => console.log(`purged ${n} old images`)));
+    ctx.waitUntil((async () => {
+      try {
+        const n = await purgeOld(env);
+        console.log(`purged ${n} old images`);
+      } catch (e) {
+        console.error("purge failed", e);
+        await tgAlert(env, `FluxGate 警告：每日清圖 cron 失敗：${e.message}`);
+      }
+    })());
   },
 };
+
+// Telegram 告警（TG_TOKEN/TG_CHAT 為 wrangler secret/var，未設則不發）
+async function tgAlert(env, text) {
+  if (!env.TG_TOKEN || !env.TG_CHAT) return;
+  try {
+    await fetch(`https://api.telegram.org/bot${env.TG_TOKEN}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: env.TG_CHAT, text }),
+    });
+  } catch { /* 告警失敗不影響主流程 */ }
+}
