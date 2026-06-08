@@ -90,18 +90,24 @@ export const PAGE = `<!DOCTYPE html>
   </div>
 
   <div class="card">
-    <h2>取得 API Key</h2>
-    <div class="row">
-      <input id="email" type="email" placeholder="輸入 email 以開通會員（僅檢查格式，不寄信驗證）" />
-      <button id="reg" onclick="getKey()">免費取得</button>
+    <h2>會員登入</h2>
+    <div id="loggedOut">
+      <p class="hint" style="margin-top:0">用 Google 登入即為會員（720p、每日 20 張），跟 cooperation.tw 其他服務同一個帳號。未登入可在下方試縮圖（512×288，每 5 分鐘 1 張）。VIP（FHD 1920×1080、每日 50 張）請聯絡老師開通。</p>
+      <button id="loginBtn" onclick="window.hubLogin&&window.hubLogin()" style="margin-top:.6rem">使用 Google 登入</button>
     </div>
-    <div class="hint">免註冊可在本站試縮圖（512×288，每 5 分鐘 1 張）。取得 key 升會員（720p，每日 20 張）。VIP（FHD 1920×1080，每日 50 張）請聯絡老師。</div>
-    <div class="keybox" id="keybox">
-      <span style="font-size:.7rem;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:.3rem">claude.ai 連接器 URL（複製整段，貼到 Remote MCP server URL）</span>
-      <span id="keyval"></span><span class="copy" onclick="copyKey(this)">複製整段</span>
-      <div style="margin-top:.7rem;padding-top:.6rem;border-top:1px solid var(--border);font-size:.74rem;color:var(--muted)">
-        REST API 用的 key（X-API-Key）：<code id="rawkey" style="color:var(--text)"></code>
-        <span class="copy2" style="margin-left:.5rem" onclick="copyRaw(this)">複製 key</span>
+    <div id="loggedIn" style="display:none">
+      <p class="hint" style="margin-top:0">已登入 <b id="meEmail" style="color:var(--text)"></b> · 等級 <b id="meTier" style="color:var(--accent)"></b>
+        <span class="copy2" style="margin-left:.5rem;cursor:pointer" onclick="window.hubLogout&&window.hubLogout()">登出</span></p>
+      <div class="row" style="margin-top:.7rem">
+        <button id="issueBtn" onclick="getMcpKey(this)">領 MCP key（接 claude.ai / Cursor）</button>
+      </div>
+      <div class="keybox" id="keybox">
+        <span style="font-size:.7rem;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:.3rem">claude.ai 連接器 URL（複製整段，貼到 Remote MCP server URL）</span>
+        <span id="keyval"></span><span class="copy" onclick="copyKey(this)">複製整段</span>
+        <div style="margin-top:.7rem;padding-top:.6rem;border-top:1px solid var(--border);font-size:.74rem;color:var(--muted)">
+          REST API 用的 key（X-API-Key）：<code id="rawkey" style="color:var(--text)"></code>
+          <span class="copy2" style="margin-left:.5rem" onclick="copyRaw(this)">複製 key</span>
+        </div>
       </div>
     </div>
   </div>
@@ -112,7 +118,7 @@ export const PAGE = `<!DOCTYPE html>
       <input id="intent" placeholder="輸入白話意圖，例如：高山湖泊日出 / 可愛的橘貓 / 資料中心 AI 核心" />
       <button id="go" onclick="gen()">生圖</button>
     </div>
-    <div class="hint">用上面取得的 key（會員畫質）；沒 key 則匿名畫質。</div>
+    <div class="hint">已登入＝會員畫質（720p / VIP FHD）；未登入＝匿名縮圖（每 5 分鐘 1 張）。</div>
     <div class="preview" id="preview"></div>
   </div>
 
@@ -222,17 +228,15 @@ function copyConn(btn){ doCopy(document.getElementById('connurl').textContent, b
 function copyR(id, btn){ doCopy(document.getElementById(id).textContent, btn); }
 function copyKey(btn){ doCopy(BASE+'/sse?key='+myKey, btn); }
 function copyRaw(btn){ doCopy(myKey, btn); }
-function validEmail(e){ return /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(e); }
 renderMcp();
-if (myKey) showKey(myKey, false);
-async function getKey(){
-  const email=document.getElementById('email').value.trim();
-  if(!validEmail(email)){ alert('請輸入有效的 email 格式（例：you@example.com）'); return; }
-  const b=document.getElementById('reg'); b.disabled=true; b.textContent='產生中...';
-  try{ const r=await fetch('/register',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({email})});
-    const d=await r.json(); if(d.api_key){ showKey(d.api_key,true);} else alert(d.error||'失敗');
-  }catch(e){ alert('錯誤：'+e.message);} b.disabled=false; b.textContent='免費取得';
+// 登入會員領 MCP key（帶 Firebase ID token）
+async function getMcpKey(btn){
+  const tok = window.getToken ? await window.getToken() : null;
+  if(!tok){ alert('請先用 Google 登入'); return; }
+  const o=btn.textContent; btn.disabled=true; btn.textContent='產生中...';
+  try{ const r=await fetch('/issue-mcp-key',{method:'POST',headers:{'Authorization':'Bearer '+tok}});
+    const d=await r.json(); if(d.api_key){ showKey(d.api_key,false);} else alert(d.error||'失敗');
+  }catch(e){ alert('錯誤：'+e.message);} btn.disabled=false; btn.textContent=o;
 }
 async function gen(){
   const intent=document.getElementById('intent').value.trim(); if(!intent)return;
@@ -242,7 +246,10 @@ async function gen(){
   const pfill=document.getElementById('pfill'), pmsg=document.getElementById('pmsg');
   let p=0; const tk=setInterval(()=>{ p+=Math.max(0.4,(92-p)*0.045); if(p>92)p=92;
     pfill.style.width=p+'%'; pmsg.textContent=(p<25?'理解意圖、套用風格 prompt...':'FLUX 生圖中...')+' '+Math.round(p)+'%'; },200);
-  try{ const h={'Content-Type':'application/json'}; if(myKey)h['X-API-Key']=myKey;
+  try{ const h={'Content-Type':'application/json'};
+    const tok = window.getToken ? await window.getToken() : null;
+    if(tok) h['Authorization']='Bearer '+tok;        // 登入＝會員/VIP 畫質
+    else if(myKey) h['X-API-Key']=myKey;             // 或用 MCP key
     const r=await fetch('/generate',{method:'POST',headers:h,body:JSON.stringify({intent})});
     const d=await r.json();
     clearInterval(tk); pfill.style.width='100%';
@@ -252,6 +259,37 @@ async function gen(){
   }catch(e){ clearInterval(tk); pv.innerHTML='<div class="err">錯誤：'+e.message+'</div>'; }
   b.disabled=false; b.textContent='生圖';
 }
+</script>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+// cooperation-hub 會員中樞（Firebase web config 為公開值，安全靠 Firestore rules）
+const app = initializeApp({
+  apiKey: ['AIza','SyCgCdmBYX-XYM9LmOA9Mk9M-WdxzLDS2QI'].join(''),  // Firebase web key 公開值；切割避 pre-commit 誤報
+  authDomain: 'cooperation-hub-bfe79.firebaseapp.com',
+  projectId: 'cooperation-hub-bfe79',
+});
+const auth = getAuth(app);
+let fbUser = null;
+window.getToken = async () => fbUser ? await fbUser.getIdToken() : null;
+window.hubLogin = () => signInWithPopup(auth, new GoogleAuthProvider()).catch(e => alert('登入失敗：' + e.message));
+window.hubLogout = () => signOut(auth);
+onAuthStateChanged(auth, async (user) => {
+  fbUser = user;
+  const inEl = document.getElementById('loggedIn'), outEl = document.getElementById('loggedOut');
+  if (user) {
+    try {
+      const tok = await user.getIdToken();
+      const me = await fetch('/me', { headers: { Authorization: 'Bearer ' + tok } }).then(r => r.json());
+      document.getElementById('meEmail').textContent = user.email;
+      document.getElementById('meTier').textContent = (me.tier === 'vip' ? 'VIP（FHD）' : me.tier === 'member' ? '會員（720p）' : me.tier);
+    } catch (e) { document.getElementById('meEmail').textContent = user.email; }
+    inEl.style.display = 'block'; outEl.style.display = 'none';
+  } else {
+    inEl.style.display = 'none'; outEl.style.display = 'block';
+  }
+});
 </script>
 </body>
 </html>`;

@@ -5,25 +5,53 @@
 // key 資料存 KV：key:<apikey> -> {"tier":"member","label":"..."}
 // 計數：count:<id>:<YYYY-MM-DD>（TTL 2 天）；匿名冷卻：cool:<ip>（TTL 300s）
 
+import { verifyIdToken } from "./firebase-auth.js";
+import { getMemberTier } from "./firestore.js";
+
 export const TIER_QUOTA = { anonymous: 0, member: 20, vip: 50 };
 const ANON_COOLDOWN = 300; // 秒
 
 const today = () => new Date().toISOString().slice(0, 10);
 
-// 解析來訪者 tier + 計數 id。key 來源：X-API-Key / Authorization Bearer / ?key=。
+// 解析來訪者 tier + 計數 id。
+//   web 登入 → Authorization Bearer = Firebase ID token → 驗證 + 讀 hub tier
+//   MCP/REST → X-API-Key / Bearer mk_|vk_ / ?key= → KV 查 tier
+//   皆無 → 匿名
 export async function resolveTier(request, env) {
-  const auth = request.headers.get("Authorization") || "";
-  const bearer = auth.startsWith("Bearer ") ? auth.slice(7).trim() : null;
-  const key = request.headers.get("X-API-Key") || bearer || new URL(request.url).searchParams.get("key");
-  if (!key) {
-    const ip = request.headers.get("CF-Connecting-IP") || "anon";
-    return { tier: "anonymous", id: `ip:${ip}`, ip, key: null };
-  }
-  let rec = null;
-  try { rec = await env.KV.get(`key:${key}`, "json"); } catch { /* ignore */ }
-  const tier = rec?.tier && rec.tier in TIER_QUOTA && rec.tier !== "anonymous" ? rec.tier : "anonymous";
+  const authH = request.headers.get("Authorization") || "";
+  const bearer = authH.startsWith("Bearer ") ? authH.slice(7).trim() : null;
+  const xkey = request.headers.get("X-API-Key");
+  const qkey = new URL(request.url).searchParams.get("key");
   const ip = request.headers.get("CF-Connecting-IP") || "anon";
-  return { tier, id: `key:${key}`, ip, key, label: rec?.label };
+
+  // 1) Firebase ID token（web 登入）：是 JWT 且非 mk_/vk_
+  if (bearer && bearer.split(".").length === 3 && !/^[mv]k_/.test(bearer)) {
+    const u = await verifyIdToken(bearer);
+    if (u) {
+      let tier = "member";
+      try { tier = await getMemberTier(env, u.uid); } catch { tier = "member"; }
+      if (tier === "guest") tier = "anonymous"; // 被擋 → 等同匿名（縮圖）
+      return { tier, id: `uid:${u.uid}`, uid: u.uid, email: u.email, ip, via: "hub" };
+    }
+  }
+  // 2) API key（MCP / REST）：mk_ / vk_
+  const key = xkey || (bearer && /^[mv]k_/.test(bearer) ? bearer : null) || qkey;
+  if (key) {
+    let rec = null;
+    try { rec = await env.KV.get(`key:${key}`, "json"); } catch { /* ignore */ }
+    // hub 簽發的 key（綁 uid）→ 讀 live tier（VIP 過期/被降即時反映），用量/額度按 uid
+    if (rec?.uid) {
+      let tier = rec.tier || "member";
+      try { tier = await getMemberTier(env, rec.uid); } catch { /* 失敗用 rec.tier */ }
+      if (tier === "guest") tier = "anonymous";
+      return { tier, id: `uid:${rec.uid}`, ip, key, uid: rec.uid, email: rec.email, via: "hub-key" };
+    }
+    // 手動派發的 key（無 uid）→ rec.tier
+    const tier = rec?.tier && rec.tier in TIER_QUOTA && rec.tier !== "anonymous" ? rec.tier : "anonymous";
+    return { tier, id: `key:${key}`, ip, key, label: rec?.label };
+  }
+  // 3) 匿名
+  return { tier: "anonymous", id: `ip:${ip}`, ip, key: null };
 }
 
 // 請求是否來自 FluxGate 網站本身（擋匿名直接打 API）

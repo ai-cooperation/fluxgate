@@ -6,6 +6,7 @@
 import { runPipeline } from "./ai.js";
 import { store } from "./storage.js";
 import { resolveTier, checkLimits } from "./auth.js";
+import { recordUsage } from "./firestore.js";
 
 const TOOL = {
   name: "generate_image",
@@ -84,6 +85,7 @@ export async function handleMcpRpc(request, env) {
     try {
       const out = await runPipeline(env, { intent, tier: who.tier, ratio });
       const key = await store(env, out.bytes, out.contentType);
+      if (who.uid) await recordUsage(env, who.uid, who.email);
       const u = `${new URL(request.url).origin}/i/${key}`;
       const rem = gate.remaining == null ? "" : `，今日剩 ${gate.remaining} 張`;
       return Response.json(rpc(id, {

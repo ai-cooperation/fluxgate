@@ -3,14 +3,15 @@ import { runPipeline } from "./ai.js";
 import { store, serve, purgeOld } from "./storage.js";
 import { resolveTier, checkLimits, TIER_QUOTA } from "./auth.js";
 import { handleMcpSSE, handleMcpRpc } from "./mcp.js";
-import { register } from "./register.js";
 import { PAGE } from "./page.js";
+import { recordUsage } from "./firestore.js";
+import { issueMcpKey } from "./issue.js";
 
 const json = (obj, status = 200) =>
   new Response(JSON.stringify(obj, null, 2), { status, headers: { "Content-Type": "application/json; charset=utf-8" } });
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const path = url.pathname;
 
@@ -19,8 +20,14 @@ export default {
       return new Response(PAGE, { headers: { "Content-Type": "text/html; charset=utf-8" } });
     }
 
-    // 自助發 key
-    if (path === "/register" && request.method === "POST") return register(request, env);
+    // 註：舊的 email 自助發 key（/register）已停用，會員一律走 Google 登入（hub）
+    // 登入會員領 MCP key（綁 hub uid）
+    if (path === "/issue-mcp-key" && request.method === "POST") return issueMcpKey(request, env);
+    // 登入者身分（前端顯示 tier）
+    if (path === "/me") {
+      const who = await resolveTier(request, env);
+      return json({ tier: who.tier, email: who.email || null, uid: who.uid || null, loggedIn: !!who.uid });
+    }
 
     // 健康檢查（JSON）
     if (path === "/health") {
@@ -58,6 +65,7 @@ export default {
       try {
         const out = await runPipeline(env, { intent, tier: who.tier, ratio: body?.ratio || null, style: body?.style || null, subject: body?.subject || null });
         const key = await store(env, out.bytes, out.contentType);
+        if (who.uid) ctx.waitUntil(recordUsage(env, who.uid, who.email)); // 用量寫 hub Firestore
         return json({
           ok: true,
           image_url: `${url.origin}/i/${key}`,
