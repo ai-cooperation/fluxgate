@@ -7,12 +7,12 @@ export async function register(request, env) {
   try { body = await request.json(); } catch { /* allow empty */ }
   const label = String(body.label || body.email || "guest").trim().slice(0, 60) || "guest";
 
-  // 防濫用：同 IP 每日最多發 5 把
+  // 防濫用：同 IP 每日最多發 2 把
   const ip = request.headers.get("CF-Connecting-IP") || "anon";
   const rk = `reg:${ip}:${today()}`;
   let n = 0;
   try { n = parseInt((await env.KV.get(rk)) || "0", 10) || 0; } catch { /* ignore */ }
-  if (n >= 5) return Response.json({ error: "今日註冊次數已達上限，請明日再試或聯絡老師升級 VIP" }, 429);
+  if (n >= 2) return Response.json({ error: "同一網路今日最多註冊 2 把 key，請明日再試或聯絡老師升級 VIP" }, 429);
 
   const key = "mk_" + crypto.randomUUID().replace(/-/g, "").slice(0, 16);
   const rec = { tier: "member", label, created: new Date().toISOString() };

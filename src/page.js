@@ -95,7 +95,7 @@ export const PAGE = `<!DOCTYPE html>
       <input id="label" placeholder="你的名稱或 email（用於識別）" />
       <button id="reg" onclick="getKey()">免費取得</button>
     </div>
-    <div class="hint">免註冊也能用（匿名 = 1024×576）。取得 key 後升為會員（1376×768）。VIP（1920×1080）請聯絡老師。</div>
+    <div class="hint">免註冊可在本站試縮圖（512×288，每 5 分鐘 1 張）。取得 key 升會員（720p，每日 20 張）。VIP（FHD 1920×1080，每日 50 張）請聯絡老師。</div>
     <div class="keybox" id="keybox">
       <span style="font-size:.7rem;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:.3rem">claude.ai 連接器 URL（複製整段，貼到 Remote MCP server URL）</span>
       <span id="keyval"></span><span class="copy" onclick="copyKey()">複製整段</span>
@@ -119,10 +119,10 @@ export const PAGE = `<!DOCTYPE html>
   <div class="card">
     <h2>權限與每日額度</h2>
     <table>
-      <tr><th>等級</th><th>解析度</th><th>每日張數</th><th>如何取得</th></tr>
-      <tr><td>匿名</td><td>1024×576</td><td>20</td><td>免註冊</td></tr>
-      <tr><td>會員</td><td>1376×768</td><td>100</td><td>上方免費取得</td></tr>
-      <tr><td>VIP</td><td>1920×1080</td><td>200</td><td>聯絡老師</td></tr>
+      <tr><th>等級</th><th>解析度</th><th>額度</th><th>如何取得</th></tr>
+      <tr><td>匿名</td><td>512×288 縮圖</td><td>網站試用，每 5 分鐘 1 張</td><td>免註冊</td></tr>
+      <tr><td>會員</td><td>1280×720 (720p)</td><td>每日 20 張</td><td>上方免費取得</td></tr>
+      <tr><td>VIP</td><td>1920×1080 (FHD)</td><td>每日 50 張</td><td>聯絡老師</td></tr>
     </table>
   </div>
 
@@ -130,12 +130,12 @@ export const PAGE = `<!DOCTYPE html>
     <h2>API 用法</h2>
     <div class="endpoint"><span class="m">POST</span><span class="p">/generate</span>
       <div class="d">body: {"intent":"...", "ratio":"16:9 | 1:1"} ・ header: X-API-Key: &lt;你的 key&gt;（可省=匿名）</div></div>
-    <pre>curl -X POST https://fluxgate.alan-chen75.workers.dev/generate \\
+    <pre>curl -X POST https://fluxgate.cooperation.tw/generate \\
   -H 'X-API-Key: mk_xxxxx' -H 'Content-Type: application/json' \\
   -d '{"intent":"高山湖泊日出"}'
 # 回 { image_url, flux_prompt, style, width, height, remaining_today }</pre>
-    <div class="endpoint"><span class="m">POST</span><span class="p">/mcp</span>
-      <div class="d">MCP server（工具 generate_image）。把此 URL 註冊為 remote MCP，agent / claude.ai 即可直接生圖。</div></div>
+    <div class="endpoint"><span class="m">GET</span><span class="p">/sse?key=</span>
+      <div class="d">MCP server（HTTP+SSE，工具 generate_image）。把含 key 的 /sse URL 註冊為 remote MCP，agent / claude.ai 即可直接生圖。</div></div>
     <div class="endpoint"><span class="m">GET</span><span class="p">/i/&lt;key&gt;</span>
       <div class="d">取圖（generate 回傳的 image_url）。圖每日清空，請自行另存。</div></div>
   </div>
@@ -159,7 +159,7 @@ export const PAGE = `<!DOCTYPE html>
         <div class="mock">
           <div class="mtitle">claude.ai / Add custom connector</div>
           <div class="mfield"><span>名稱</span><b>FluxGate</b></div>
-          <div class="mfield"><span>Remote MCP server URL</span><b style="color:var(--accent)">https://…/mcp?key=mk_…</b></div>
+          <div class="mfield"><span>Remote MCP server URL</span><b style="color:var(--accent)">https://…/sse?key=mk_…</b></div>
           <div class="mfield hl"><span>驗證 (Authentication)</span><b>無驗證 ✓</b></div>
           <div class="mbtn">新增</div>
         </div>
@@ -193,19 +193,19 @@ export const PAGE = `<!DOCTYPE html>
 </div>
 
 <script>
-const BASE='https://fluxgate.alan-chen75.workers.dev';
+const BASE=location.origin;
 let myKey = localStorage.getItem('fluxgate_key') || '';
 function showKey(k, save){ myKey=k;
-  document.getElementById('keyval').textContent=BASE+'/mcp?key='+k;
+  document.getElementById('keyval').textContent=BASE+'/sse?key='+k;
   document.getElementById('rawkey').textContent=k;
   document.getElementById('keybox').classList.add('show'); if(save) localStorage.setItem('fluxgate_key',k); renderMcp(); }
 function renderMcp(){
   const k = myKey || '<你的KEY>';
-  const conn = BASE+'/mcp?key='+k;
+  const conn = BASE+'/sse?key='+k;
   document.getElementById('connurl').textContent = conn;
   document.getElementById('rcd').textContent = JSON.stringify({mcpServers:{fluxgate:{command:'npx',args:['mcp-remote',conn]}}},null,2);
   document.getElementById('rcur').textContent = JSON.stringify({mcpServers:{fluxgate:{url:conn}}},null,2);
-  document.getElementById('rcdx').textContent = '[mcp_servers.fluxgate]\\nurl = "'+BASE+'/mcp"\\nbearer_token = "'+k+'"';
+  document.getElementById('rcdx').textContent = '[mcp_servers.fluxgate]\\nurl = "'+BASE+'/sse?key='+k+'"';
 }
 function copyConn(){ navigator.clipboard.writeText(document.getElementById('connurl').textContent); }
 function copyR(id){ navigator.clipboard.writeText(document.getElementById(id).textContent); }
@@ -218,7 +218,7 @@ async function getKey(){
     const d=await r.json(); if(d.api_key){ showKey(d.api_key,true);} else alert(d.error||'失敗');
   }catch(e){ alert('錯誤：'+e.message);} b.disabled=false; b.textContent='免費取得';
 }
-function copyKey(){ navigator.clipboard.writeText(BASE+'/mcp?key='+myKey); }
+function copyKey(){ navigator.clipboard.writeText(BASE+'/sse?key='+myKey); }
 function copyRaw(){ navigator.clipboard.writeText(myKey); }
 async function gen(){
   const intent=document.getElementById('intent').value.trim(); if(!intent)return;

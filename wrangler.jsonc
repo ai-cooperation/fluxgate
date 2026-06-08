@@ -12,6 +12,10 @@
   "kv_namespaces": [
     { "binding": "KV", "id": "4177c07dd9a546a1becec692b38b9556" }
   ],
+  // 自訂網域（cooperation.tw zone 在同帳號）
+  "routes": [
+    { "pattern": "fluxgate.cooperation.tw", "custom_domain": true }
+  ],
   // 每日 17:00 UTC（台北 01:00）清空舊圖
   "triggers": { "crons": ["0 17 * * *"] },
   "vars": { "RETENTION_DAYS": "7" },

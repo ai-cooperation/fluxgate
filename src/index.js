@@ -1,8 +1,8 @@
 // FluxGate Worker — 入口。REST /generate + MCP /mcp + 圖床 /i/* + cron 清空。
 import { runPipeline } from "./ai.js";
 import { store, serve, purgeOld } from "./storage.js";
-import { resolveTier, checkAndCount, TIER_QUOTA } from "./auth.js";
-import { handleMcp } from "./mcp.js";
+import { resolveTier, checkLimits, TIER_QUOTA } from "./auth.js";
+import { handleMcpSSE, handleMcpRpc } from "./mcp.js";
 import { register } from "./register.js";
 import { PAGE } from "./page.js";
 
@@ -26,16 +26,21 @@ export default {
     if (path === "/health") {
       return json({
         service: "fluxgate", status: "ok",
-        endpoints: { rest: "POST /generate {intent, ratio?}", mcp: "POST /mcp", image: "GET /i/<key>" },
-        tiers: TIER_QUOTA,
+        endpoints: { rest: "POST /generate {intent, ratio?}", mcp: "POST /mcp (SSE)", image: "GET /i/<key>" },
+        tiers: {
+          anonymous: { res: "512x288 縮圖", limit: "網站試用，每 5 分鐘 1 張" },
+          member: { res: "1280x720", limit: `每日 ${TIER_QUOTA.member} 張` },
+          vip: { res: "1920x1080", limit: `每日 ${TIER_QUOTA.vip} 張` },
+        },
       });
     }
 
     // 圖床
     if (path.startsWith("/i/")) return serve(env, decodeURIComponent(path.slice(3)));
 
-    // MCP
-    if (path === "/mcp" || path === "/sse") return handleMcp(request, env);
+    // MCP — GET 開 SSE 流；POST 走 JSON-RPC（claude.ai HTTP+SSE transport）
+    if ((path === "/sse" || path === "/mcp") && request.method === "GET") return handleMcpSSE(request, env);
+    if (path === "/mcp" || path === "/mcp/messages" || path === "/sse") return handleMcpRpc(request, env);
 
     // REST 生圖
     if (path === "/generate" && request.method === "POST") {
@@ -46,19 +51,19 @@ export default {
       const bypass = body?.style && body?.subject;
       if (!intent && !bypass) return json({ error: "intent required (or style+subject)" }, 400);
 
-      const { tier, id, label } = await resolveTier(request, env);
-      const gate = await checkAndCount(env, id, tier);
-      if (!gate.ok) return json({ error: "quota exceeded", tier, quota: gate.quota }, 429);
+      const who = await resolveTier(request, env);
+      const gate = await checkLimits(request, env, who);
+      if (!gate.ok) return json({ error: gate.error, tier: who.tier }, gate.status || 429);
 
       try {
-        const out = await runPipeline(env, { intent, tier, ratio: body?.ratio || null, style: body?.style || null, subject: body?.subject || null });
+        const out = await runPipeline(env, { intent, tier: who.tier, ratio: body?.ratio || null, style: body?.style || null, subject: body?.subject || null });
         const key = await store(env, out.bytes, out.contentType);
         return json({
           ok: true,
           image_url: `${url.origin}/i/${key}`,
           style: out.style, width: out.width, height: out.height,
           flux_prompt: out.flux_prompt, subject: out.subject,
-          tier, label, remaining_today: gate.remaining,
+          tier: who.tier, label: who.label, remaining_today: gate.remaining,
         });
       } catch (e) {
         return json({ error: "generation failed", detail: e.message }, 502);
