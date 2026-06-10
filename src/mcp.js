@@ -4,14 +4,14 @@
 //   POST /mcp           -> 也接受直接 JSON-RPC（Cursor / curl 等）
 // 認證：key 走 URL ?key=（claude.ai connector URL 含 key）或 X-API-Key / Bearer。
 import { resolveTier, checkLimits } from "./auth.js";
-import { createJob, getJob, processJob } from "./jobs.js";
+import { createJob, driveJob } from "./jobs.js";
 
-// 兩個工具：generate_image（提交 job，立刻回 job_id）+ check_job（poll 結果）。
-// 非同步避免同步阻塞 6-15 秒導致 claude.ai SSE session terminated。
+// 兩步：generate_image（建工作，立刻回 job_id）→ check_job（取圖；第一次呼叫會「同步」把圖生出來，~8-15 秒）。
+// 不靠 ctx.waitUntil（best-effort 偶爾被砍致卡 running）；改在 check_job 內同步完成，可靠。
 const TOOLS = [
   {
     name: "generate_image",
-    description: "提交一張 AI 生圖工作（非同步）。FluxGate 自動套 FLUX 專用 prompt 工藝（風格分類 + 物理光照鏈 + 大師引用）。立刻回 job_id；接著用 check_job(job_id) 查詢結果（約 10-20 秒，poll 每 3-5 秒一次）。",
+    description: "建立一張 AI 生圖工作。FluxGate 自動套 FLUX 專用 prompt 工藝（風格分類 + 物理光照鏈 + 大師引用）。立刻回 job_id；接著呼叫 check_job(job_id) 取圖。",
     inputSchema: {
       type: "object",
       properties: {
@@ -23,7 +23,7 @@ const TOOLS = [
   },
   {
     name: "check_job",
-    description: "查詢 generate_image 提交的生圖工作狀態。queued/running=還在跑請繼續 poll；done=回圖片 URL；failed=含錯誤。",
+    description: "取得 generate_image 工作的圖。第一次呼叫會生成（約 8-15 秒，請耐心等待回應）並回圖片 URL；done=回圖片 URL；running=正在生成請 3 秒後再呼叫一次；failed=含錯誤。",
     inputSchema: {
       type: "object",
       properties: { job_id: { type: "string", description: "generate_image 回的 job_id" } },
@@ -85,16 +85,16 @@ export async function handleMcpRpc(request, env, ctx) {
     const name = params?.name;
     const args = params?.arguments || {};
 
-    // check_job：poll 結果
+    // check_job：第一次呼叫會「同步」把圖生出來（driveJob），可靠回結果
     if (name === "check_job") {
-      const job = await getJob(env, args.job_id);
+      const job = await driveJob(env, args.job_id);
       if (!job) return Response.json(rpc(id, toolText(`查無此 job_id（可能已過期，請重新 generate_image）`, true)));
       if (job.status === "done") return Response.json(rpc(id, toolText(`完成（${job.style}, ${job.width}x${job.height}）\n${job.image_url}`)));
       if (job.status === "failed") return Response.json(rpc(id, toolText(`生成失敗：${job.error}`, true)));
-      return Response.json(rpc(id, toolText(`狀態：${job.status}（還在跑，請 3-5 秒後再 check_job）`)));
+      return Response.json(rpc(id, toolText(`正在生成中，請 3 秒後再呼叫一次 check_job("${args.job_id}")`)));
     }
 
-    // generate_image：提交 job，立刻回 job_id；背景 waitUntil 生圖
+    // generate_image：只建工作，立刻回 job_id（生成在 check_job 內同步做，不靠 waitUntil）
     if (name === "generate_image") {
       const intent = args.intent;
       if (!intent) return Response.json(rpcErr(id, -32602, "intent required"));
@@ -105,10 +105,8 @@ export async function handleMcpRpc(request, env, ctx) {
 
       const origin = new URL(request.url).origin;
       const jobId = await createJob(env, { intent, tier: who.tier, ratio: args.ratio || null, uid: who.uid, email: who.email, origin });
-      const p = processJob(env, jobId, { intent, tier: who.tier, ratio: args.ratio || null, uid: who.uid, email: who.email, origin });
-      if (ctx && ctx.waitUntil) ctx.waitUntil(p); else p.catch(() => {});
       const rem = gate.remaining == null ? "" : `（今日剩 ${gate.remaining} 張）`;
-      return Response.json(rpc(id, toolText(`已排隊生圖${rem}。job_id=${jobId}\n約 10-20 秒，請用 check_job("${jobId}") 查結果（每 3-5 秒 poll 一次）。`)));
+      return Response.json(rpc(id, toolText(`已建立生圖工作${rem}，job_id=${jobId}\n請呼叫 check_job("${jobId}") 取圖（會生成，約 8-15 秒，請耐心等待回應）。`)));
     }
 
     return Response.json(rpcErr(id, -32601, `unknown tool: ${name}`));
