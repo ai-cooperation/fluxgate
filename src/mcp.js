@@ -16,7 +16,7 @@ const TOOLS = [
       type: "object",
       properties: {
         intent: { type: "string", description: "白話生圖意圖，任何語言，例如「高山湖泊日出」「可愛的橘貓」「資料中心 AI 核心」" },
-        ratio: { type: "string", enum: ["16:9", "1:1"], description: "可選，強制長寬比；省略則由風格決定" },
+        ratio: { type: "string", enum: ["16:9", "1:1", "4:5"], description: "可選，強制長寬比；省略則由風格決定" },
       },
       required: ["intent"],
     },
@@ -89,7 +89,7 @@ export async function handleMcpRpc(request, env, ctx) {
     if (name === "check_job") {
       const job = await driveJob(env, args.job_id);
       if (!job) return Response.json(rpc(id, toolText(`查無此 job_id（可能已過期，請重新 generate_image）`, true)));
-      if (job.status === "done") return Response.json(rpc(id, toolText(`完成（${job.style}, ${job.width}x${job.height}）\n${job.image_url}`)));
+      if (job.status === "done") return Response.json(rpc(id, toolText(`完成（${job.style}, ${job.width}x${job.height}, steps=${job.steps || 4}）\n${job.image_url}`)));
       if (job.status === "failed") return Response.json(rpc(id, toolText(`生成失敗：${job.error}`, true)));
       return Response.json(rpc(id, toolText(`正在生成中，請 3 秒後再呼叫一次 check_job("${args.job_id}")`)));
     }
@@ -101,7 +101,7 @@ export async function handleMcpRpc(request, env, ctx) {
       const who = await resolveTier(request, env);
       const gate = await checkLimits(request, env, who);
       if (!gate.ok) return Response.json(rpc(id, toolText(
-        who.tier === "anonymous" ? "MCP 需帶 API key（連接器 URL 加 ?key=你的key）。免費取得：https://fluxgate.cooperation.tw" : gate.error, true)));
+        who.tier === "anonymous" ? "MCP 需帶 API key（連接器 URL 加 ?key=你的key）。請先在 FluxGate 首頁登入並領取 MCP key。" : gate.error, true)));
 
       const origin = new URL(request.url).origin;
       const jobId = await createJob(env, { intent, tier: who.tier, ratio: args.ratio || null, uid: who.uid, email: who.email, origin });

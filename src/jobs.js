@@ -34,7 +34,7 @@ export async function driveJob(env, id) {
     const out = await runPipeline(env, { intent: job.intent, tier: job.tier, ratio: job.ratio });
     const key = await store(env, out.bytes, out.contentType);
     if (job.uid) await recordUsage(env, job.uid, job.email);
-    return patchJob(env, id, { status: "done", image_url: `${job.origin}/i/${key}`, style: out.style, width: out.width, height: out.height });
+    return patchJob(env, id, { status: "done", image_url: `${job.origin}/i/${key}`, style: out.style, width: out.width, height: out.height, steps: out.steps });
   } catch (e) {
     return patchJob(env, id, { status: "failed", error: String(e?.message || e) });
   }

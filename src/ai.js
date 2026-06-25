@@ -4,8 +4,10 @@ import { ROUTER_SYSTEM, compose } from "./expander.js";
 const LLM = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
 const FLUX = "@cf/black-forest-labs/flux-1-schnell";
 
-const STYLE_KEYS = ["landscape", "lifestyle", "cute-3d", "classical-oil", "ink-wash",
+const STYLE_KEYS = ["landscape", "lifestyle", "personal-brand-editorial", "cute-3d", "classical-oil", "ink-wash",
   "tech-emissive", "corporate-work", "architecture", "photoreal-portrait", "food", "illustration", "sports-action"];
+const STYLE_STEPS = { "personal-brand-editorial": 8 };
+const DEFAULT_STEPS = 4;
 const ROUTE_SCHEMA = {
   type: "json_schema",
   json_schema: {
@@ -52,9 +54,14 @@ function sniffType(bytes) {
   return "image/png";
 }
 
+export function stepsForStyle(style, quality = "standard") {
+  if (quality === "draft") return DEFAULT_STEPS;
+  return STYLE_STEPS[style] || DEFAULT_STEPS;
+}
+
 // prompt + 尺寸 -> 圖片 bytes
-export async function flux(env, prompt, width, height) {
-  const res = await env.AI.run(FLUX, { prompt, steps: 4, width, height });
+export async function flux(env, prompt, width, height, steps = DEFAULT_STEPS) {
+  const res = await env.AI.run(FLUX, { prompt, steps, width, height });
   if (!res?.image) throw new Error("flux returned no image");
   const bytes = b64ToBytes(res.image);
   return { bytes, contentType: sniffType(bytes) };
@@ -62,10 +69,11 @@ export async function flux(env, prompt, width, height) {
 
 // 完整管線（不含儲存）：intent -> {flux_prompt, style, width, height, bytes, contentType, subject}
 // style+subject 同時給時跳過 router（進階/測試用，router 已另外驗證）。
-export async function runPipeline(env, { intent, tier = "member", ratio = null, style = null, subject = null }) {
+export async function runPipeline(env, { intent, tier = "member", ratio = null, style = null, subject = null, quality = "standard" }) {
   const r = (style && subject) ? { style, subject } : await route(env, intent);
-  const c = compose(r.style, r.subject, tier, ratio);
-  console.log(`[fluxgate] inject->flux ${c.width}x${c.height} style=${c.style} :: ${c.flux_prompt}`);
-  const img = await flux(env, c.flux_prompt, c.width, c.height);
-  return { ...c, subject: r.subject, ...img };
+  const c = compose(r.style, r.subject, tier, ratio, quality);
+  const steps = stepsForStyle(c.style, c.quality);
+  console.log(`[fluxgate] inject->flux ${c.width}x${c.height} steps=${steps} quality=${c.quality} style=${c.style} :: ${c.flux_prompt}`);
+  const img = await flux(env, c.flux_prompt, c.width, c.height, steps);
+  return { ...c, steps, subject: r.subject, ...img };
 }

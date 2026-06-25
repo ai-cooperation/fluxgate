@@ -63,13 +63,20 @@ export default {
       if (!gate.ok) return json({ error: gate.error, tier: who.tier }, gate.status || 429);
 
       try {
-        const out = await runPipeline(env, { intent, tier: who.tier, ratio: body?.ratio || null, style: body?.style || null, subject: body?.subject || null });
+        const out = await runPipeline(env, {
+          intent,
+          tier: who.tier,
+          ratio: body?.ratio || null,
+          style: body?.style || null,
+          subject: body?.subject || null,
+          quality: body?.quality || "standard",
+        });
         const key = await store(env, out.bytes, out.contentType);
         if (who.uid) ctx.waitUntil(recordUsage(env, who.uid, who.email)); // 用量寫 hub Firestore
         return json({
           ok: true,
           image_url: `${url.origin}/i/${key}`,
-          style: out.style, width: out.width, height: out.height,
+          style: out.style, width: out.width, height: out.height, steps: out.steps, quality: out.quality,
           flux_prompt: out.flux_prompt, subject: out.subject,
           tier: who.tier, label: who.label, remaining_today: gate.remaining,
         });

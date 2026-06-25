@@ -2,21 +2,19 @@
   "name": "fluxgate",
   "main": "src/index.js",
   "compatibility_date": "2026-06-01",
-  // Workers AI binding (llama 路由 + flux 生圖，同帳號免費 10k neurons/日)
+  // Workers AI binding (LLM routing + FLUX image generation).
   "ai": { "binding": "AI" },
-  // R2 圖床（每日 cron 清空，不留暫存）
+  // R2 image storage. Generated images are served by the Worker at /i/<key>.
   "r2_buckets": [
     { "binding": "IMAGES", "bucket_name": "fluxgate-images" }
   ],
-  // KV：API key -> tier 對照 + 每日用量計數
+  // KV stores API keys, job state, anonymous cooldowns and daily usage counts.
+  // Replace this id after running: npx wrangler kv namespace create KV
   "kv_namespaces": [
-    { "binding": "KV", "id": "4177c07dd9a546a1becec692b38b9556" }
+    { "binding": "KV", "id": "REPLACE_WITH_KV_NAMESPACE_ID" }
   ],
-  // 自訂網域（cooperation.tw zone 在同帳號）
-  "routes": [
-    { "pattern": "fluxgate.cooperation.tw", "custom_domain": true }
-  ],
-  // 每日 17:00 UTC（台北 01:00）清空舊圖
+  // Daily cleanup. Normal generated image keys use YYYY-MM-DD/... and expire.
+  // Homepage example images under examples/... are not date-prefixed and are retained.
   "triggers": { "crons": ["0 17 * * *"] },
   "vars": { "RETENTION_DAYS": "7" },
   "observability": { "enabled": true }

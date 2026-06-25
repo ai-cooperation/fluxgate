@@ -70,8 +70,15 @@ export const PAGE = `<!DOCTYPE html>
   .okbox{background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.3);} .okbox b{color:var(--green);}
   .warnbox{background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);} .warnbox b{color:#fbbf24;}
   .boxes ul{margin:.4rem 0 0 1rem;color:var(--muted);line-height:1.6;}
+  .examples{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;margin-top:1rem;}
+  .ex{background:var(--bg);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+  .ex img{width:100%;display:block;aspect-ratio:4/5;object-fit:cover;background:#111827;}
+  .exbody{padding:.85rem;}
+  .exbody h3{font-size:.95rem;margin-bottom:.35rem;}
+  .exbody p{font-size:.78rem;color:var(--muted);line-height:1.55;margin-bottom:.6rem;}
+  .prompt{font-family:var(--mono);font-size:.72rem;line-height:1.5;color:#cbd5e1;background:#0b1220;border:1px solid var(--border);border-radius:8px;padding:.65rem;white-space:pre-wrap;}
   @media(max-width:600px){.hero h1{font-size:1.9rem;}.row{flex-direction:column;}.container{padding:1rem;}
-    .step{grid-template-columns:1fr;}.boxes{grid-template-columns:1fr;}}
+    .step{grid-template-columns:1fr;}.boxes,.examples{grid-template-columns:1fr;}}
 </style>
 </head>
 <body>
@@ -86,6 +93,7 @@ export const PAGE = `<!DOCTYPE html>
       <span class="badge on">✓ 古典油畫</span><span class="badge on">✓ 科技</span>
       <span class="badge on">✓ 企業建築</span><span class="badge on">✓ 美食</span>
       <span class="badge on">✓ 運動</span><span class="badge on">✓ 童書插畫</span>
+      <span class="badge on">✓ 個人品牌雜誌感</span>
     </div>
   </div>
 
@@ -123,6 +131,146 @@ export const PAGE = `<!DOCTYPE html>
   </div>
 
   <div class="card">
+    <h2>時尚個人品牌範例</h2>
+    <p class="hint" style="margin-top:0">FluxGate 負責生成主視覺；中文標題請後製加上。下面 prompt 是示範用的 subject，不需要把中文字放進生圖 prompt。</p>
+    <div class="examples">
+      <div class="ex">
+        <img src="/i/examples/fashion-market-bench.jpg" alt="Market bench editorial example">
+        <div class="exbody">
+          <h3>Market Bench Editorial</h3>
+          <p>街景、坐姿、細肩帶與外套鬆弛感，適合品牌定位或個人故事封面。</p>
+          <div class="prompt">中文：雨後的老城市市場，一位成年亞洲女性側坐在低石椅上，細肩帶上衣搭 oversized 深色外套，紅頭巾，手部低調，濕地面與模糊水果箱，街頭時尚感，保留大面積留白。
+English: adult Asian woman seated sideways on a low stone bench in an old urban market street after rain, thin-strap top under an oversized dark jacket, red bandana, hands low and quiet, wet pavement, blurred fruit crates, muted street fashion mood, large negative space</div>
+        </div>
+      </div>
+      <div class="ex">
+        <img src="/i/examples/fashion-taxi-backseat.jpg" alt="Taxi backseat editorial example">
+        <div class="exbody">
+          <h3>Taxi Backseat Editorial</h3>
+          <p>車內暗部、斜坐姿、夜色窗景，適合焦慮、轉場、城市感內容。</p>
+          <div class="prompt">中文：夜晚老計程車後座，一位成年亞洲女性斜坐在車內，細肩帶上衣搭 oversized 西裝外套，手藏在外套陰影中，窗外城市燈光散景，疲憊疏離的眼神，車內暗部留白。
+English: adult Asian woman sitting diagonally across the back seat of an old taxi at night, thin-strap top under oversized blazer, hands hidden under blazer fabric, city lights outside the window as soft bokeh, tired distant gaze, dark interior negative space</div>
+        </div>
+      </div>
+      <div class="ex">
+        <img src="/i/examples/fashion-outdoor-cafe.jpg" alt="Outdoor cafe editorial example">
+        <div class="exbody">
+          <h3>Outdoor Cafe Editorial</h3>
+          <p>戶外咖啡座、側坐、街角背景，適合知性但不商業的人像封面。</p>
+          <div class="prompt">中文：狹窄城市人行道的戶外咖啡桌旁，一位成年亞洲女性側坐，opaque slip dress 搭 oversized 外套，看向街道遠方，手部裁在畫面下方，空桌面與陰影牆面留給標題。
+English: adult Asian woman seated sideways at a small outdoor cafe table on a narrow city sidewalk, opaque slip dress under an oversized coat, looking past the street, hands cropped below frame, empty table surface and shadowed wall area for title</div>
+        </div>
+      </div>
+      <div class="ex">
+        <img src="/i/examples/fashion-rooftop-wind.jpg" alt="Rooftop wind editorial example">
+        <div class="exbody">
+          <h3>Rooftop Wind Editorial</h3>
+          <p>屋頂、風、城市遠景，適合自由、壓力、轉型主題；手部仍需注意。</p>
+          <div class="prompt">中文：有風的城市屋頂，一位成年亞洲女性側坐在簡單金屬椅上，遠方城市天際線，distressed knit 搭 modest camisole，頭髮自然被風吹動，手臂藏在寬袖裡，天空留白。
+English: adult Asian woman sitting sideways on a simple metal chair on a windy rooftop, city skyline far behind, distressed knit over a modest camisole, hair moving naturally, arms low inside oversized sleeves, large pale sky area for title</div>
+        </div>
+      </div>
+      <div class="ex">
+        <img src="/i/examples/fashion-ferry-deck.jpg" alt="Ferry deck editorial example">
+        <div class="exbody">
+          <h3>Ferry Deck Editorial</h3>
+          <p>夜間渡輪、海面與城市燈，適合漂流、內容疲勞、長期品牌敘事。</p>
+          <div class="prompt">中文：夜間渡輪甲板長椅，一位成年亞洲女性斜坐，黑色 tank top 搭 oversized trench coat，身體呈對角線，風吹到半閉眼，深藍海面與遠方城市燈光作留白。
+English: adult Asian woman seated on a ferry deck bench with dark ocean and distant city lights behind her, black tank top under oversized trench coat, body angled diagonally, eyes half closed in wind, deep blue water negative space</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>多風格範例</h2>
+    <p class="hint" style="margin-top:0">同一個入口可生成不同視覺語言。這些範例直接指定 style，適合作為 API / MCP 的提示方向。</p>
+    <div class="examples">
+      <div class="ex">
+        <img src="/i/examples/gallery-landscape-alpine.jpg" alt="Landscape example">
+        <div class="exbody">
+          <h3>Landscape</h3>
+          <p>風景、旅遊、開場背景。</p>
+          <div class="prompt">中文：日出時的高山湖泊，鋸齒狀山脊，低霧繞過深色松林，前景有一座小木碼頭，冷藍陰影與橘色邊光。
+English: A dramatic alpine lake at sunrise with a jagged mountain ridge, low fog curling over dark pine trees, tiny wooden dock, cold blue shadows and warm orange rim light.</div>
+        </div>
+      </div>
+      <div class="ex">
+        <img src="/i/examples/gallery-ink-wash-temple.jpg" alt="Ink wash example">
+        <div class="exbody">
+          <h3>水墨 / Ink Wash</h3>
+          <p>東方山水、留白、詩意場景；紅印可保留，避免題字與可讀文字。</p>
+          <div class="prompt">中文：霧中的山寺與狹窄瀑布，松樹垂向石橋，遠山淡入大片宣紙留白，水墨暈染、乾筆近景，小紅印可以，但不要書法題字或可讀文字。
+English: A quiet mountain temple hidden in mist beside a narrow waterfall, pine trees bending over a stone bridge, distant cliffs fading into blank rice-paper space, ink wash bleeding and dry-brush foreground, a small red seal is acceptable, no calligraphy or readable text.</div>
+        </div>
+      </div>
+      <div class="ex">
+        <img src="/i/examples/gallery-cute-3d-cat.jpg" alt="Cute 3D example">
+        <div class="exbody">
+          <h3>Cute 3D</h3>
+          <p>角色、貼圖、可愛物件。</p>
+          <div class="prompt">中文：一隻穿迷你雨衣的小橘貓坐在廚房桌上的茶杯裡，圓圓好奇的眼睛，周圍有小小濕腳印。
+English: A tiny orange tabby cat wearing a miniature raincoat, sitting inside a teacup on a kitchen table, curious round eyes, small wet paw prints.</div>
+        </div>
+      </div>
+      <div class="ex">
+        <img src="/i/examples/gallery-tech-core.jpg" alt="Tech emissive example">
+        <div class="exbody">
+          <h3>Tech Emissive</h3>
+          <p>AI、資料中心、科技視覺。</p>
+          <div class="prompt">中文：透明的 AI 處理器核心漂浮在黑色玻璃資料中心中，青藍光沿著光纖脈動，金屬機櫃隱在陰影裡。
+English: A transparent AI processor core floating inside a dark glass data center, cyan light pulsing through fiber threads, metal racks barely visible in shadow.</div>
+        </div>
+      </div>
+      <div class="ex">
+        <img src="/i/examples/gallery-oil-luthier.jpg" alt="Classical oil example">
+        <div class="exbody">
+          <h3>古典油畫 / Classical Oil</h3>
+          <p>古典人物、工藝、故事感。</p>
+          <div class="prompt">中文：年老小提琴工匠在木工桌前檢查半成品小提琴，捲曲木屑、黃銅工具、一盞燭光照亮手部與琴身。
+English: An elderly violin maker examining a half-finished violin at a wooden workbench, curled wood shavings, brass tools, single candle light.</div>
+        </div>
+      </div>
+      <div class="ex">
+        <img src="/i/examples/gallery-food-ramen.jpg" alt="Food example">
+        <div class="exbody">
+          <h3>Food</h3>
+          <p>餐飲、菜單、社群美食圖。</p>
+          <div class="prompt">中文：一碗冒著熱氣的辣味味噌拉麵，亮面辣油、溏心蛋、焦香玉米、青蔥，放在深色木吧台上的粗陶碗裡。
+English: A steaming bowl of spicy miso ramen with glossy chili oil, soft egg, charred corn, spring onions and textured ceramic bowl on a dark wooden counter.</div>
+        </div>
+      </div>
+      <div class="ex">
+        <img src="/i/examples/gallery-architecture-library.jpg" alt="Architecture example">
+        <div class="exbody">
+          <h3>Architecture</h3>
+          <p>建築、空間、城市品牌。</p>
+          <div class="prompt">中文：現代公共圖書館，溫暖木質室內光從高玻璃牆透出，藍調時刻的雨濕石板廣場倒映建築立面。
+English: A contemporary public library with warm wooden interiors glowing through tall glass walls, rain-wet stone plaza reflecting the facade at blue hour.</div>
+        </div>
+      </div>
+      <div class="ex">
+        <img src="/i/examples/gallery-storybook-fox.jpg" alt="Storybook illustration example">
+        <div class="exbody">
+          <h3>Storybook</h3>
+          <p>童書、課程插圖、溫柔敘事。</p>
+          <div class="prompt">中文：一隻小狐狸和穿黃色雨衣的小孩走在月光森林小徑上，發光蘑菇，水坑倒映星光。
+English: A small fox and a child in a yellow raincoat walking through a moonlit forest path, glowing mushrooms, puddles reflecting stars.</div>
+        </div>
+      </div>
+      <div class="ex">
+        <img src="/i/examples/gallery-sports-skater.jpg" alt="Sports action example">
+        <div class="exbody">
+          <h3>Sports Action</h3>
+          <p>動態、競賽、速度感。</p>
+          <div class="prompt">中文：女性競速滑冰選手在室內冰道高速壓彎，冰刀後方濺起凝結冰霧，背景觀眾動態模糊。
+English: A female speed skater leaning hard into a turn on an indoor ice track, frozen spray behind the blade, motion blurred audience in the background.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
     <h2>權限與每日額度</h2>
     <table>
       <tr><th>等級</th><th>解析度</th><th>額度</th><th>如何取得</th></tr>
@@ -136,7 +284,7 @@ export const PAGE = `<!DOCTYPE html>
     <h2>API 用法</h2>
     <div class="endpoint"><span class="m">POST</span><span class="p">/generate</span>
       <div class="d">body: {"intent":"...", "ratio":"16:9 | 1:1"} ・ header: X-API-Key: &lt;你的 key&gt;（可省=匿名）</div></div>
-    <pre>curl -X POST https://fluxgate.cooperation.tw/generate \\
+    <pre>curl -X POST &lt;本頁網域&gt;/generate \\
   -H 'X-API-Key: mk_xxxxx' -H 'Content-Type: application/json' \\
   -d '{"intent":"高山湖泊日出"}'
 # 回 { image_url, flux_prompt, style, width, height, remaining_today }</pre>

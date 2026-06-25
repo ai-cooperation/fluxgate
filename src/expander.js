@@ -3,9 +3,10 @@
 
 export const ROUTER_SYSTEM = `You are FluxGate's intent router. Given a plain user intent (any language), output JSON with two fields:
 1. "style": classify into EXACTLY ONE key from:
-   landscape | lifestyle | cute-3d | classical-oil | ink-wash | tech-emissive | corporate-work | architecture | photoreal-portrait | food | illustration | sports-action
+   landscape | lifestyle | personal-brand-editorial | cute-3d | classical-oil | ink-wash | tech-emissive | corporate-work | architecture | photoreal-portrait | food | illustration | sports-action
 2. "subject": ONE vivid ENGLISH sentence describing the concrete physical subject as the dramatic central focus, with micro-tactile details (textures, materials, physical weight). Translate abstract/news intents into a concrete HERO-SHOT subject. Never render text, company/product names, or literal puns. If people appear, compose hands occluded or fingers curled.
 INTERPRET FAITHFULLY — preserve the SPECIFIC action, pose, and implied objects/attire of the intent; do NOT flatten it to the most generic reading. e.g. a spacewalk implies a SPACESUIT + helmet + a striding/walking pose (not merely floating); a chef implies an apron and a kitchen; "riding" implies the mount and a seated pose. Keep the verb's real meaning.
+PERSONAL BRAND COVERS — if the intent asks for personal branding, Instagram cover, carousel cover, magazine cover, editorial fashion, quiet luxury creator visuals, thought-leadership visuals, emotional brand storytelling, or negative space for later title text, classify as 'personal-brand-editorial'. Preserve the concrete scene, clothing, posture, expression, and requested empty text area in the subject. Prefer upper-body or half-body editorial composition with the face clearly visible; avoid tiny distant faces and avoid extreme top-down angles when eyes are visible. Looking away, relaxed eyelids, or closed eyes are preferred over a direct camera stare. Keep hands low-detail: partially covered by sleeves, resting in shadow, softly folded, motion-softened, or cropped at the wrist; avoid visible individual fingers, open palms, spread fingers, hands near the camera, or hands at image edges. Avoid describing documents, book pages, posters, signs, screens, labels, or other text-bearing props unless essential; use closed folders, fabric, glass, water, walls, or empty surfaces instead. Never ask the image model to render Chinese or any readable text.
 PEOPLE — frame people respectfully and wholesomely. For casual / beach / swimwear / sports / lifestyle subjects classify as 'lifestyle' (a natural travel/lifestyle scene), NOT 'photoreal-portrait', and describe the scene and activity rather than the body; avoid sensual, revealing, close-up-skin or suggestive posing language. Reserve 'photoreal-portrait' for documentary character studies (weathered faces, working hands, occupation).
 Do NOT mention cameras, lenses, film, lighting setup, color grade, or any artist/director — those are appended later by code.
 OUTPUT JSON ONLY, no fence: {"style":"<key>","subject":"<one english sentence>"}`;
@@ -16,12 +17,14 @@ export const STYLE_PROFILES = {
     suffix: "Shot on Canon EOS R5, 16-35mm f/11, Fuji Velvia 50, deep focus. Strong natural backlight: the subject and foreground read as dark silhouettes with thin rim-light edges, fronts in cool shadow; scattered crepuscular rays break diagonally through patchy mist; distant elements fade into low-contrast blue atmospheric haze. Warm-amber sky against cool teal shadows. In the style of Roger Deakins and Ansel Adams." },
   "lifestyle": { ratio: "16:9", medium: "photo",
     suffix: "Shot on Sony A7IV, 85mm f/1.4, Kodak Portra 400, creamy bokeh. Soft directional window side-light gently lighting the near side with a catchlight in the eyes, far side in soft shadow; warm rising steam or backlit dust catches the side light. Natural skin texture, warm honey grade. In the style of Wong Kar-wai." },
+  "personal-brand-editorial": { ratio: "4:5", medium: "photo",
+    suffix: "Editorial fashion photo for a personal brand magazine cover, raw source photo before typography. Upper/half-body; face at least 18% of image height, unobstructed aligned eyes, relaxed eyelids. Natural skin: visible pores, under-eye texture, faint blemishes, uneven tone; no airbrushed retouching, no glossy beauty makeup. Prefer looking away, lowered gaze, or closed eyes; avoid direct camera stare, extreme top-down angles. Adult fashion pieces: thin-strap top, tank top, opaque slip dress, cropped long-sleeve top, open-collar shirt, oversized suit, bandana, distressed knit; tasteful shoulders, collarbone, arms, or small waistline OK if opaque and non-lingerie. Hands low-detail only: oversized sleeves, shadow, below frame, hidden pockets, motion-softened, cropped; avoid individual fingers, open palms, spread fingers, foreshortened hands, hands near camera/face, edge-touching hands. Calm distant confidence, quiet psychological tension, dim available light, low-key side light, dense shadows, muted gray-blue/off-white, one-stop underexposed, Fujicolor 400 raw editorial photo, analog film grain, halation, lens softness, imperfect film scan. Worn 1990s urban texture: stained concrete walls, old corridors, shabby non-text clutter, blurred distant people. Avoid transparent fabric, wet transparent clothing, lingerie, bikini, swimsuit styling, erotic posing, midday sun, high-key commercial lighting, glossy studio beauty, sterile stock-photo cleanliness, commercial portrait polish. Off-center person, large clean negative space for later Chinese typography. No readable text, documents, posters, signs, screens, labels, captions, printed marks, handwriting, glyphs, letters, symbols, logos, watermarks, cartoon, plastic skin, distorted eyes, malformed hands, extra fingers." },
   "cute-3d": { ratio: "1:1", medium: "3d",
     suffix: "Stylized 3D render, subsurface scattering glowing warmly through translucent edges, soft global illumination. Soft key light from upper-left wraps the form; a colored rim light from behind separates it from the background; glossy catchlights in the big eyes. Warm pastel palette, shallow depth of field. In the style of Pixar and DreamWorks." },
   "classical-oil": { ratio: "1:1", medium: "painting",
     suffix: "17th-century oil painting, thick impasto, visible canvas weave, craquelure and varnish sheen. A single warm candle or window is the ONLY light source, brightly lighting the near side with steep inverse-square falloff into deep umber shadow, background near-black, the flame reflected as a point in the eyes; chiaroscuro 4:1. In the style of Rembrandt and Caravaggio." },
   "ink-wash": { ratio: "16:9", medium: "ink",
-    suffix: "Traditional Chinese ink-wash painting, monochrome black ink bleeding softly into rice-paper grain, saturated dry-brush strokes on near elements, far elements fading to pale dilute washes lost in mist. No cast shadows; depth purely by ink density; abundant negative space; a small red seal stamp in a corner. Faint aged-paper warmth. In the style of Song literati Fan Kuan and Guo Xi." },
+    suffix: "Traditional Chinese ink-wash painting, monochrome black ink bleeding softly into rice-paper grain, saturated dry-brush strokes on near elements, far elements fading to pale dilute washes lost in mist. No cast shadows; depth purely by ink density; abundant negative space; a small abstract red seal stamp in a corner, but no calligraphy, no readable text, no title inscription, no handwriting. Faint aged-paper warmth. In the style of Song literati Fan Kuan and Guo Xi." },
   "tech-emissive": { ratio: "16:9", medium: "photo",
     suffix: "Shot on Sony A7R V, 35mm T1.5, anamorphic flare, subtle chromatic aberration. The glowing subject IS the only light source, cast radially, brightest on the nearest surfaces and falling off into surrounding darkness; cyan reflections streak along polished metal and glass facing it; volumetric haze glows where the light passes. Teal-cyan (#1a3a4a) halated highlights, Blade Runner 2049 grade. In the style of Roger Deakins and Denis Villeneuve." },
   "corporate-work": { ratio: "16:9", medium: "photo",
@@ -40,21 +43,33 @@ export const STYLE_PROFILES = {
 
 // 各 tier 明確尺寸（陳老師定 2026-06-08）：匿名=縮圖 / 會員=720p / VIP 也 720p(只是每日額度多，FHD 太燒 neuron 不給)
 const SIZES = {
-  anonymous: { "16:9": [512, 288], "1:1": [512, 512] },   // 縮圖，只能網站試
-  member:    { "16:9": [1280, 720], "1:1": [720, 720] },  // 720p，每日 20 張
-  vip:       { "16:9": [1280, 720], "1:1": [720, 720] },  // 720p，每日 50 張（張數多，非更高畫質）
+  anonymous: { "16:9": [512, 288], "1:1": [512, 512], "4:5": [512, 640] },   // 縮圖，只能網站試
+  member:    { "16:9": [1280, 720], "1:1": [720, 720], "4:5": [512, 640] },  // 720p，每日 20 張；4:5 先固定低成本驗證
+  vip:       { "16:9": [1280, 720], "1:1": [720, 720], "4:5": [512, 640] },  // 720p，每日 50 張；4:5 先固定低成本驗證
 };
+const DRAFT_SIZES = {
+  "4:5": [256, 320],
+};
+const MAX_FLUX_PROMPT = 2048;
 
-export function dims(tier, ratio) {
+export function dims(tier, ratio, quality = "standard") {
+  if (quality === "draft" && DRAFT_SIZES[ratio]) return DRAFT_SIZES[ratio];
   const t = SIZES[tier] || SIZES.anonymous;
   return t[ratio] || t["16:9"];
 }
 
 // 合成最終 prompt + 解析度。ratioOverride 可強制 16:9（如新聞 banner）。
-export function compose(style, subject, tier = "member", ratioOverride = null) {
+export function compose(style, subject, tier = "member", ratioOverride = null, quality = "standard") {
   const prof = STYLE_PROFILES[style] || STYLE_PROFILES["photoreal-portrait"];
   const ratio = ratioOverride || prof.ratio;
-  const flux_prompt = `${String(subject).trim().replace(/\.$/, "")}. ${prof.suffix}`;
-  const [width, height] = dims(tier, ratio);
-  return { flux_prompt, width, height, style: STYLE_PROFILES[style] ? style : "photoreal-portrait", ratio };
+  const qualityMode = quality === "draft" ? "draft" : "standard";
+  let cleanSubject = String(subject).trim().replace(/\.$/, "");
+  let flux_prompt = `${cleanSubject}. ${prof.suffix}`;
+  if (flux_prompt.length > MAX_FLUX_PROMPT) {
+    const maxSubject = Math.max(0, MAX_FLUX_PROMPT - prof.suffix.length - 2);
+    cleanSubject = cleanSubject.slice(0, maxSubject).trimEnd().replace(/[,\s]+$/, "");
+    flux_prompt = `${cleanSubject}. ${prof.suffix}`;
+  }
+  const [width, height] = dims(tier, ratio, qualityMode);
+  return { flux_prompt, width, height, style: STYLE_PROFILES[style] ? style : "photoreal-portrait", ratio, quality: qualityMode };
 }
