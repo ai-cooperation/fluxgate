@@ -45,6 +45,7 @@ Homepage examples use `examples/...` keys and are intentionally retained.
 
 `fluxgate.cooperation.tw` 綁在轉發器上；為什麼要拆兩個帳號、三處必要改寫、
 部署驗證清單、踩雷史，全部在 [`forwarder/README.md`](forwarder/README.md)——**改架構前先讀它**。
+行為契約（endpoints / 分級額度 / 錯誤碼 / invariants）see [`SPEC.md`](SPEC.md)——**改行為前先讀它**。
 
 ## Manual Setup Checklist / 手動設定清單
 
