@@ -34,6 +34,18 @@ Homepage examples use `examples/...` keys and are intentionally retained.
 產出的圖片預設使用 `YYYY-MM-DD/<uuid>.jpg` 這類 R2 key，排程會依 `RETENTION_DAYS` 清除舊圖。
 首頁範例圖使用 `examples/...`，不會被日期清理邏輯刪除。
 
+## Production Topology / 正式部署架構（維護前必讀）
+
+正式站是**雙帳號雙 worker**，不是單一部署：
+
+| Worker | 帳號 | 部署方式 |
+|---|---|---|
+| 本體（本 repo 根目錄） | 生圖帳號（Workers AI / KV / R2 / secrets 都在這） | 登入生圖帳號 → `npx wrangler deploy -c wrangler.aicooperation.jsonc`（該檔不入 git） |
+| 公網轉發器 [`forwarder/`](forwarder/) | cooperation.tw zone 所在帳號 | 登入 zone 帳號 → `cd forwarder && npx wrangler deploy` |
+
+`fluxgate.cooperation.tw` 綁在轉發器上；為什麼要拆兩個帳號、三處必要改寫、
+部署驗證清單、踩雷史，全部在 [`forwarder/README.md`](forwarder/README.md)——**改架構前先讀它**。
+
 ## Manual Setup Checklist / 手動設定清單
 
 These steps cannot be fully automated because they depend on the Cloudflare account owner.

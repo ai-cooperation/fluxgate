@@ -1,0 +1,10 @@
+{
+  // 個人帳號 fluxgate worker 的轉發器設定。custom domain 綁定（fluxgate.cooperation.tw）
+  // 不在此檔管理——它掛在 worker 本體上，deploy 不會動到它。
+  "name": "fluxgate",
+  "main": "worker.js",
+  "compatibility_date": "2026-06-01",
+  "workers_dev": false,
+  // 清掉舊 worker 的每日 R2 清理 cron（轉發器無 scheduled handler，留著會空轉報錯）
+  "triggers": { "crons": [] }
+}
