@@ -39,6 +39,18 @@ export const STYLE_PROFILES = {
     suffix: "Hand-painted children's storybook illustration, soft gouache and watercolor texture with visible paper tooth, gentle rounded outlines, friendly shapes. Warm soft daylight wrapping the scene with tender ambient fill. Whimsical pastel palette. In the style of classic picture-book artists like Beatrix Potter." },
   "sports-action": { ratio: "16:9", medium: "photo",
     suffix: "Shot on Canon EOS R3, 400mm f/2.8, fast shutter freezing the motion with slight panning blur in the background. Hard directional sunlight rim-lights flying sweat and muscle, casting long dramatic shadows. High-contrast vivid grade. In the style of sports photojournalist Neil Leifer." },
+  // --- 新聞 banner 專用（2026-07-17 加）---
+  // 刻意「不」列進 ROUTER_SYSTEM 的分類清單：router 永遠不會自動選到，
+  // 只有 pipeline 明確帶 style 才取用 → 對公開用戶零影響。
+  // 兩者都必須：底部留白給 PIL 疊中文標題 + 禁止任何可讀文字（FLUX 畫字必糊）。
+  "news-ai100": { ratio: "16:9", medium: "render",
+    suffix: "Abstract technology graphic for a news banner, raw source image before typography. Isometric circuit-board topology: luminous cyan conductive traces branch and turn across a deep navy substrate, thin translucent holographic panels float above the plane with faint scanline texture, small emissive nodes pulse at the junctions. The traces ARE the only light source, radiating cyan outward and falling off into deep navy darkness; thin volumetric haze glows where the emission passes; subtle bloom and anamorphic streaks on the brightest nodes. Graphic and diagrammatic, not photographic: no people, no faces, no hands, no physical server room, no hardware product shot. Deep navy to cyan gradient, high contrast, clean vector-like clarity softening to gentle depth blur at the edges. Calm uncluttered lower third: large dark negative space across the bottom for later Chinese typography. In the style of Blade Runner 2049 interface design and Ash Thorp. No readable text, words, letters, numbers, glyphs, captions, labels, signs, logos, watermarks, brand marks." },
+  // 註：FLUX.1-schnell 是 guidance-distilled（CFG=1），**沒有負面提示能力**。
+  // 寫 "no text/banners/signs" 反而把這些詞餵進正向 prompt 誘發亂碼字（2026-07-17 實測）。
+  // 因此本 suffix 全部改用「正面描述」：指定畫面裡該有什麼（素面、無字表面、空前景），
+  // 而非列舉不要什麼。同理，底部留白要正面描述成「空曠前景佔下三分之一」。
+  "news-s100": { ratio: "16:9", medium: "photo",
+    suffix: "Documentary photojournalism for a sustainability news banner, raw wire-service frame before typography. Shot on Canon EOS R6, 35mm f/4, Kodak Portra 400 pushed one stop, focus deep enough to hold the whole environment. Overcast diffuse daylight from a flat grey sky: soft wraparound light, open shadows, gentle falloff into the depth of the scene; distant figures and structures sink into low-contrast atmospheric haze. Candid unposed real-world scene with authentic weather and wear; any people are mid-action, turned away or seen in profile, faces small and incidental, hands occluded by sleeves or cropped, framed at a journalistic distance. Every surface is plain and unmarked: bare weathered fabric, blank painted metal, raw concrete, unadorned stone; the camera is angled so that inscribed facades, storefronts, and printed material stay out of frame. The bottom third is open empty ground — bare wet pavement, plain earth, or still water — a calm vacant band beneath the action, reserved for later Chinese typography. Muted desaturated grade, cool teal-grey shadows against restrained earth tones, one stop underexposed, fine film grain, slight halation, imperfect scan. Journalistic restraint and quiet gravity, available light only. In the style of Reuters and Associated Press wire photography with Sebastiao Salgado's documentary composure." },
 };
 
 // 各 tier 明確尺寸（陳老師定 2026-06-08）：匿名=縮圖 / 會員=720p / VIP 也 720p(只是每日額度多，FHD 太燒 neuron 不給)
