@@ -1,0 +1,27 @@
+schema_version: "0.1.0"
+update:
+  strategy: manual
+  upstream_check: gh api repos/ai-cooperation/fluxgate/releases/latest
+  preview_before_promote: true
+backup:
+  targets: [kv, r2]
+  method: 更新或移除前，以 wrangler kv key list/get 匯出必要 key record，並以 S3 相容工具同步 R2 圖片
+  frequency_hint: 大版本更新前；API key 異動後；依圖片保留需求另行安排
+restore:
+  method: 重新建立 KV 與 R2 binding，匯入先前保存的 key record 與圖片，再部署已知可用的 Git commit
+uninstall:
+  steps:
+    - npx wrangler delete
+    - npx wrangler kv namespace delete --namespace-id <YOUR_KV_NAMESPACE_ID>
+    - npx wrangler r2 bucket delete fluxgate-images
+  data_export_first: true
+quota_watchdog:
+  watch:
+    - resource: workers_ai_neurons
+      free_limit: 依 Cloudflare 帳號方案與官方即時文件
+      check_method: Cloudflare Dashboard → Workers AI → Usage
+      alert_threshold: 由部署者依帳號方案設定；不可硬編碼過期額度
+    - resource: r2_storage
+      free_limit: 依 Cloudflare 帳號方案與官方即時文件
+      check_method: Cloudflare Dashboard → R2 → Metrics
+      alert_threshold: 由部署者依圖片量與 RETENTION_DAYS 設定

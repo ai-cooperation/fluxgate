@@ -1,0 +1,37 @@
+schema_version: "0.1.0"
+health:
+  path: /health
+  expect_status: 200
+  expect_body_contains: "\"status\": \"ok\""
+smoke:
+  - name: 健康端點回報服務正常
+    steps:
+      - action: http_request
+        params:
+          method: GET
+          path: /health
+    expect:
+      status: 200
+      body_contains: "\"status\": \"ok\""
+    idempotency: true
+  - name: MCP 列出兩個生圖工具
+    steps:
+      - action: http_request
+        params:
+          method: POST
+          path: /mcp
+          json:
+            jsonrpc: "2.0"
+            id: 1
+            method: tools/list
+    expect:
+      status: 200
+      body_contains: generate_image
+    idempotency: true
+user_acceptance:
+  - task: 使用 draft 品質產生一張合成測試圖片，確認回應含可開啟的 image_url
+    success_looks_like: 生圖成功、圖片網址回 HTTP 200，且 R2 出現對應日期前綴物件
+  - task: 以部署者自行簽發的 key 連接 ChatGPT 或其他 MCP client，依序呼叫 generate_image 與 check_job
+    success_looks_like: client 取得 job_id，之後取得可開啟的圖片網址
+uninstall_check:
+  resource_zero_diff: true
