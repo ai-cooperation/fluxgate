@@ -1,0 +1,13 @@
+name: conformance
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+jobs:
+  conformance:
+    uses: smallgreen-cloud/conformance/.github/workflows/conformance.yml@main
+    with:
+      spec_ref: v0.1.0
+      run_smoke: true

@@ -1,0 +1,40 @@
+schema_version: "0.1.0"
+profile: small-app
+summary:
+  purpose: 把白話生圖意圖轉成 FLUX 圖片，並透過 REST 與 MCP 提供給個人網站及 AI agent 使用
+  audience: 想在自己 Cloudflare 帳號部署私人 AI 生圖工具的個人與教學者
+  users_estimate: "1-10"
+login_method: token
+data:
+  types: [api_keys, usage_counters, anonymous_cooldowns, mcp_jobs, generated_images]
+  stored_in: [kv, r2]
+  notes: 開源預設為單一 Cloudflare 帳號；Firebase 會員整合與跨帳號轉發器皆為選配
+secrets:
+  - name: FB_SERVICE_ACCOUNT
+    purpose: 選配的 Firebase 會員驗證、等級查詢與用量紀錄
+    required: false
+    how_to_obtain: 從自有 Firebase 專案建立最小權限 service account，並以 wrangler secret put 設定
+    free_tier: true
+  - name: TG_TOKEN
+    purpose: 選配的排程清理失敗 Telegram 告警
+    required: false
+    how_to_obtain: 向 Telegram BotFather 建立 bot，再以 wrangler secret put 設定
+    free_tier: true
+  - name: TG_CHAT
+    purpose: 選配的 Telegram 告警接收 chat id
+    required: false
+    how_to_obtain: 從自有 Telegram chat 取得 id，再以 wrangler secret put 設定
+    free_tier: true
+external_services:
+  - domain: oauth2.googleapis.com
+    purpose: 選配 Firebase service account 換取 Google OAuth access token
+    data_sent: Firebase service account 簽署的 JWT assertion
+  - domain: firestore.googleapis.com
+    purpose: 選配會員等級查詢與生圖用量紀錄
+    data_sent: Firebase uid、email 與用量時間
+  - domain: www.googleapis.com
+    purpose: 選配 Firebase ID token 公開簽章金鑰與 token 驗證資料
+    data_sent: token 驗證所需的公開 key 查詢與 Firebase token metadata
+  - domain: api.telegram.org
+    purpose: 選配的排程清理失敗告警
+    data_sent: 錯誤摘要與設定的 chat id
