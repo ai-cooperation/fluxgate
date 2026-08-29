@@ -1,7 +1,18 @@
-// Firestore admin 存取（用 service account 簽 OAuth token + REST）。讀 hub tier、寫用量。
+// Firestore admin 存取（用 service account 簽 OAuth token + REST）。讀 Firebase tier、寫用量。
 // SA JSON 存 wrangler secret env.FB_SERVICE_ACCOUNT。純 Web Crypto，無 firebase-admin（Workers 不支援）。
-const HUB_PROJECT = "cooperation-hub-bfe79";
-const FS_BASE = `https://firestore.googleapis.com/v1/projects/${HUB_PROJECT}/databases/(default)/documents`;
+import { firebaseProjectId } from "./firebase-auth.js";
+
+function firebaseProject(env) {
+  const configured = firebaseProjectId(env);
+  if (configured) return configured;
+  try {
+    const projectId = JSON.parse(env.FB_SERVICE_ACCOUNT || "").project_id;
+    if (typeof projectId === "string" && projectId.trim()) return projectId.trim();
+  } catch { /* optional Firebase integration is not configured */ }
+  throw new Error("FIREBASE_PROJECT_ID or service-account project_id is required for Firebase integration");
+}
+
+const firestoreBase = (projectId) => `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents`;
 
 let tokCache = { tok: null, exp: 0 };
 
@@ -35,10 +46,10 @@ async function accessToken(env) {
   return d.access_token;
 }
 
-// 讀使用者在 fluxgate 的有效 tier（無 membership → defaultTier 'member'；VIP 過期 → 降 member）
+// 讀使用者在 FluxGate 的有效 tier（無 membership → defaultTier 'member'；VIP 過期 → 降 member）
 export async function getMemberTier(env, uid) {
   const tok = await accessToken(env);
-  const r = await fetch(`${FS_BASE}/users/${uid}`, { headers: { Authorization: `Bearer ${tok}` } });
+  const r = await fetch(`${firestoreBase(firebaseProject(env))}/users/${uid}`, { headers: { Authorization: `Bearer ${tok}` } });
   if (r.status === 404) return "member";
   if (!r.ok) throw new Error(`Firestore read ${r.status}`);
   const d = await r.json();
@@ -53,11 +64,12 @@ export async function getMemberTier(env, uid) {
 }
 
 // 記用量 + upsert 使用者 doc：set email、fluxgateUsage.total +1、lastAt=now。
-// 用 SA 全權寫，admin / Firebase console 用 email 找得到人 + 看次數（滿足「看誰登入用 + 次數」）。
+// 用 SA 全權寫，admin / Firebase console 用 email 找得到人 + 看次數。
 export async function recordUsage(env, uid, email) {
   try {
     const tok = await accessToken(env);
-    const docName = `projects/${HUB_PROJECT}/databases/(default)/documents/users/${uid}`;
+    const projectId = firebaseProject(env);
+    const docName = `projects/${projectId}/databases/(default)/documents/users/${uid}`;
     const write = {
       updateMask: { fieldPaths: [] },
       updateTransforms: [
@@ -67,7 +79,7 @@ export async function recordUsage(env, uid, email) {
       update: { name: docName, fields: {} },
     };
     if (email) { write.update.fields.email = { stringValue: email }; write.updateMask.fieldPaths.push("email"); }
-    await fetch(`${FS_BASE}:commit`, {
+    await fetch(`${firestoreBase(projectId)}:commit`, {
       method: "POST", headers: { Authorization: `Bearer ${tok}`, "Content-Type": "application/json" },
       body: JSON.stringify({ writes: [write] }),
     });
@@ -77,7 +89,7 @@ export async function recordUsage(env, uid, email) {
 // 由 email 查 uid（grant 後找 uid 用；走 runQuery）
 export async function uidByEmail(env, email) {
   const tok = await accessToken(env);
-  const r = await fetch(`https://firestore.googleapis.com/v1/projects/${HUB_PROJECT}/databases/(default)/documents:runQuery`, {
+  const r = await fetch(`${firestoreBase(firebaseProject(env))}:runQuery`, {
     method: "POST", headers: { Authorization: `Bearer ${tok}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       structuredQuery: {

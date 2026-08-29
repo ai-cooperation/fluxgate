@@ -22,8 +22,9 @@
    ```
 4. **PROVISIONING**：在同一 Cloudflare 帳號建立 KV namespace 與 `fluxgate-images` R2 bucket，把 KV id 填入本機帳號專用設定；不要把真實 id 寫入公開範本。
 5. **DEPLOYING**：先用 `npx wrangler whoami` 核對帳號，再部署。
-6. **VERIFYING**：依 `.smallgreen/acceptance.yaml` 驗證 `/health`、MCP tools/list，以及一張明示為合成測試的 draft 圖。
-7. **HANDOFF**：交付 URL、key 簽發方式、備份與完整移除指令。
+6. **KEY_ISSUANCE**：部署後用 `npm run issue-key -- --label <label> --tier member --config <config>` 派發手動 key；CLI 會先寫遠端 KV，成功後只顯示一次 key。
+7. **VERIFYING**：依 `.smallgreen/acceptance.yaml` 驗證 `/health`、MCP tools/list，以及一張明示為合成測試的 draft 圖。
+8. **HANDOFF**：交付 URL、key 保存方式、備份與完整移除指令。
 
 ## 不變量
 

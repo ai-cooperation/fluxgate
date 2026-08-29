@@ -3,7 +3,7 @@ import { runPipeline } from "./ai.js";
 import { store, serve, purgeOld } from "./storage.js";
 import { resolveTier, checkLimits, TIER_QUOTA } from "./auth.js";
 import { handleMcpSSE, handleMcpRpc } from "./mcp.js";
-import { PAGE } from "./page.js";
+import { renderPage } from "./page.js";
 import { recordUsage } from "./firestore.js";
 import { issueMcpKey } from "./issue.js";
 
@@ -17,11 +17,11 @@ export default {
 
     // 首頁（HTML）
     if (path === "/") {
-      return new Response(PAGE, { headers: { "Content-Type": "text/html; charset=utf-8" } });
+      return new Response(renderPage(env), { headers: { "Content-Type": "text/html; charset=utf-8" } });
     }
 
-    // 註：舊的 email 自助發 key（/register）已停用，會員一律走 Google 登入（hub）
-    // 登入會員領 MCP key（綁 hub uid）
+    // 註：舊的 email 自助發 key（/register）已停用；Firebase 會員整合為選配。
+    // 登入會員領 MCP key（綁 Firebase uid）
     if (path === "/issue-mcp-key" && request.method === "POST") return issueMcpKey(request, env);
     // 登入者身分（前端顯示 tier）
     if (path === "/me") {
@@ -72,7 +72,7 @@ export default {
           quality: body?.quality || "standard",
         });
         const key = await store(env, out.bytes, out.contentType);
-        if (who.uid) ctx.waitUntil(recordUsage(env, who.uid, who.email)); // 用量寫 hub Firestore
+        if (who.uid) ctx.waitUntil(recordUsage(env, who.uid, who.email)); // 用量寫 Firebase Firestore
         return json({
           ok: true,
           image_url: `${url.origin}/i/${key}`,

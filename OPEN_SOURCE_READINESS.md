@@ -1,6 +1,6 @@
 # FluxGate 開源準備狀態
 
-更新日期：2026-07-30
+更新日期：2026-08-29
 
 ## 公開產品邊界
 
@@ -25,17 +25,20 @@
 - [x] 跨 CLI `AGENTS.md`
 - [x] 單元測試與 dependency audit 基線
 - [x] 正式帳號專用設定保持 untracked
+- [x] 不依賴 Firebase 的遠端 KV key 發放 CLI（`scripts/issue-key.mjs`）
+- [x] 首頁預設為部署者版本；Firebase 登入改為 public vars opt-in
+- [x] Firebase project id 可由部署設定指定；預設不要求 Firebase
+- [x] 維護者雙帳號拓撲移至 `docs/MAINTAINER.md`
+- [x] auth、MCP JSON-RPC、storage purge、manual key 與首頁設定測試
+- [x] 已在隔離 Cloudflare 資源完成 live REST/MCP 生圖、KV key、R2 清理與 teardown
+- [x] 已產生 SmallGreen 隔離 Evidence Pack：`registry/evidence/fluxgate/2026-08-29-isolated-01.json`
 
 ## 公開前必須完成
 
-- [ ] 把帳號專用 Wrangler 檔名加入忽略規則，避免未來誤加；修改 `.gitignore` 前需取得專案擁有者明確同意
-- [ ] 提供不依賴 Firebase 的部署者 key 簽發 CLI，key 只顯示一次並直接寫入遠端 KV
-- [ ] 將首頁預設文案改為一般部署者版本，Firebase 登入 UI 改成選配
-- [ ] 把 `SPEC.md` 的正式營運拓撲移到 maintainer 文件；主規格以單帳號模式為準
-- [ ] 為 auth、MCP JSON-RPC、storage purge 與 key 簽發補齊測試
-- [ ] 本機跑 SmallGreen conformance 全綠並產生 Evidence Pack
+- [x] 把帳號專用 Wrangler 檔名加入忽略規則，避免未來誤加
+- [x] 本機跑 SmallGreen conformance 全綠並產生隔離 Evidence Pack
 - [ ] 在乾淨 Cloudflare 測試帳號完成建立、部署、draft 生圖、MCP 連線、備份與 teardown
-- [ ] 人工確認 GitHub 公開樹只含程式碼、合成測試資料與範例設定
+- [x] 人工確認 GitHub 公開樹只含程式碼、合成測試資料與範例設定
 
 ## 禁止公開
 

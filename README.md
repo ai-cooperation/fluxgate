@@ -34,18 +34,13 @@ Homepage examples use `examples/...` keys and are intentionally retained.
 產出的圖片預設使用 `YYYY-MM-DD/<uuid>.jpg` 這類 R2 key，排程會依 `RETENTION_DAYS` 清除舊圖。
 首頁範例圖使用 `examples/...`，不會被日期清理邏輯刪除。
 
-## Production Topology / 正式部署架構（維護前必讀）
+## Deployment Topology / 部署架構
 
-正式站是**雙帳號雙 worker**，不是單一部署：
+The open-source default is a single Worker with Workers AI, KV and R2. A maintainer may add a separate custom-domain forwarder when account boundaries require it; that topology is optional and documented in [`docs/MAINTAINER.md`](docs/MAINTAINER.md) and [`forwarder/README.md`](forwarder/README.md).
 
-| Worker | 帳號 | 部署方式 |
-|---|---|---|
-| 本體（本 repo 根目錄） | 生圖帳號（Workers AI / KV / R2 / secrets 都在這） | 登入生圖帳號 → `npx wrangler deploy -c wrangler.aicooperation.jsonc`（該檔不入 git） |
-| 公網轉發器 [`forwarder/`](forwarder/) | cooperation.tw zone 所在帳號 | 登入 zone 帳號 → `cd forwarder && npx wrangler deploy` |
+開源預設是單一 Worker，綁定 Workers AI、KV 與 R2。若維護者因帳號邊界需要額外 custom-domain 轉發器，該雙帳號拓撲是選配，規則記在 [`docs/MAINTAINER.md`](docs/MAINTAINER.md) 與 [`forwarder/README.md`](forwarder/README.md)。
 
-`fluxgate.cooperation.tw` 綁在轉發器上；為什麼要拆兩個帳號、三處必要改寫、
-部署驗證清單、踩雷史，全部在 [`forwarder/README.md`](forwarder/README.md)——**改架構前先讀它**。
-行為契約（endpoints / 分級額度 / 錯誤碼 / invariants）see [`SPEC.md`](SPEC.md)——**改行為前先讀它**。
+行為契約（endpoints / 分級額度 / 錯誤碼 / invariants）見 [`SPEC.md`](SPEC.md)——**改行為前先讀它**。
 
 ## Manual Setup Checklist / 手動設定清單
 
@@ -151,14 +146,16 @@ Recommended Claude workflow:
 
 ## Tiers / 權限與解析度
 
-| tier | access | dimensions | limit |
+| tier | access | layout target | limit |
 |---|---|---|---|
 | anonymous | homepage only | `16:9` 512x288, `1:1` 512x512, `4:5` 512x640 | 1 image per IP per 5 minutes |
 | member | Firebase login or `mk_` key | `16:9` 1280x720, `1:1` 720x720, `4:5` 512x640 | 20/day |
 | vip | Firebase login or `vk_` key | same dimensions as member | 50/day |
 
+These dimensions are layout targets used by the prompt/composition policy. The default FLUX.1-schnell model does not accept arbitrary width/height inputs; API responses report the actual dimensions decoded from the returned image.
+
 `quality: "draft"` is available for low-cost pose/style checks.
-For `4:5`, draft uses 256x320 and 4 FLUX steps.
+For `4:5`, draft uses a 256x320 layout target and 4 FLUX steps; it is not a model resize command.
 
 `quality: "draft"` 可用於低成本測姿勢與風格。
 `4:5` draft 目前使用 256x320 與 4 steps。
@@ -185,14 +182,14 @@ This estimate does not include the Llama routing call. If you pass `style + subj
 
 | mode | size | steps | FLUX-only rough neurons/image | rough images/day from 10k neurons |
 |---|---:|---:|---:|---:|
-| draft 4:5 | 256x320 | 4 | ~40 | ~250 |
-| anonymous 16:9 | 512x288 | 4 | ~41 | ~240 |
-| personal-brand 4:5 | 512x640 | 8 | ~83 | ~120 |
-| square member | 720x720 | 4 | ~48 | ~205 |
-| widescreen member | 1280x720 | 4 | ~55 | ~180 |
-| hypothetical 4:5 high-res | 1024x1280 | 8 | ~101 | ~99 |
+| draft 4:5 layout target | 256x320 | 4 | ~40 | ~250 |
+| anonymous 16:9 layout target | 512x288 | 4 | ~41 | ~240 |
+| personal-brand 4:5 layout target | 512x640 | 8 | ~83 | ~120 |
+| square member layout target | 720x720 | 4 | ~48 | ~205 |
+| widescreen member layout target | 1280x720 | 4 | ~55 | ~180 |
+| hypothetical 4:5 high-res layout target | 1024x1280 | 8 | ~101 | ~99 |
 
-Practical routed usage is lower because Llama routing also consumes neurons.
+The dimensions in this table are layout targets, not guaranteed model output sizes. Practical routed usage is lower because Llama routing also consumes neurons.
 For prompt-heavy routed generation, treat the table as an upper bound and monitor the Workers AI dashboard.
 
 實際可用張數會更少，因為 Llama router 也會消耗 neurons。
@@ -281,19 +278,42 @@ Deploy:
 npx wrangler deploy
 ```
 
+Issue a manual API key after deployment:
+
+部署完成後，可用不依賴 Firebase 的 CLI 派發 API key：
+
+```bash
+npm run issue-key -- --label "your-name" --tier member --config wrangler.jsonc
+```
+
+The command writes `key:<key>` to the remote `KV` binding with `--remote` and prints the full key once, only after the write succeeds. Save it immediately. Use the key as `X-API-Key` for REST or as `/sse?key=<key>` for an MCP client. `member` allows 20 images per day; `vip` allows 50 and should only be issued by the operator.
+
+這個指令會以 `--remote` 將 `key:<key>` 寫入遠端 `KV`，只有寫入成功後才顯示一次完整 key。請立即保存；REST 用 `X-API-Key`，MCP 用 `/sse?key=<key>`。`member` 每日 20 張，`vip` 每日 50 張，應只由維護者派發。
+
 For production deployments, keep account-specific config files local and out of Git.
-The committed `wrangler.jsonc` is a portable template.
+The committed `wrangler.jsonc` is a portable template. Its Firebase variables are blank by default.
 
 正式部署時，帳號專用設定檔應留在本機或 CI secret 管理，不要 commit。
 Repo 內的 `wrangler.jsonc` 是可攜範本。
 
 ## Optional Secrets / 選配 Secrets
 
-Firebase / Hub integration:
+Firebase membership integration:
 
-Firebase / Hub 整合：
+Firebase 會員整合：
 
 - `FB_SERVICE_ACCOUNT`: service account JSON used by `src/firestore.js`
+
+Optional Firebase web login:
+
+- `FIREBASE_API_KEY`
+- `FIREBASE_AUTH_DOMAIN`
+- `FIREBASE_PROJECT_ID`
+- `FIREBASE_CONFIG` (alternative JSON object containing the three fields above)
+
+Set the three public Firebase variables in the deployment config only when you want the homepage login UI. Leave them blank for the default Firebase-free deployment; the manual key CLI remains available. If `FB_SERVICE_ACCOUNT` is present, the project id is taken from `FIREBASE_PROJECT_ID` or the service-account JSON and is used for the optional membership lookup and usage writes.
+
+只有需要首頁 Firebase 登入時，才在部署設定填入三個公開 Firebase 變數；預設留白即可，手動 key CLI 不受影響。若設定 `FB_SERVICE_ACCOUNT`，會員查詢與用量寫入會使用 `FIREBASE_PROJECT_ID`，或 service-account JSON 裡的 `project_id`。
 
 Failure alerting:
 

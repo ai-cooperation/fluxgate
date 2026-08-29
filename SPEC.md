@@ -2,17 +2,13 @@
 
 > **以程式碼為準**：本檔記錄意圖與契約，數字類每項標注來源檔。
 > 發現本檔與程式碼不一致 = bug（文件漂移或程式改壞），回報處理，不要默默改任一邊。
-> 部署拓撲與跨帳號規則見 [forwarder/README.md](forwarder/README.md)（維護前必讀）。
+> 開源預設是單一 Cloudflare 帳號；維護者的正式雙帳號拓撲與跨帳號規則見 [docs/MAINTAINER.md](docs/MAINTAINER.md) 與 [forwarder/README.md](forwarder/README.md)。
 
 ## 1. 定位
 
 白話意圖（任何語言）→ FLUX.1-schnell 生圖 → R2 → 回 URL。全 Cloudflare 原生（無瀏覽器、無 VM）。
-定位：內部 pipeline + 教學 + 會員服務；高寫實需求走 GemGate（Gemini Pro），不互相取代。
-
-```
-fluxgate.cooperation.tw（zone 帳號，純轉發器）
-   → fluxgate.aicooperation.workers.dev（生圖帳號本體：AI/KV/R2/secrets）
-```
+開源預設是單一 Worker 綁定 Workers AI、KV 與 R2；REST 與 MCP 共用同一個 Worker URL。維護者的正式雙帳號拓撲另記於 `docs/MAINTAINER.md`，不屬於一般部署必要條件。
+定位：內部 pipeline + 教學 + 可自架的生圖服務；高寫實需求走 GemGate（Gemini Pro），不互相取代。
 
 ## 2. Endpoints（src/index.js）
 
@@ -22,31 +18,31 @@ fluxgate.cooperation.tw（zone 帳號，純轉發器）
 | `POST /generate` | 三選一或匿名 | 生圖（同步，~7-15s）。見 §4 |
 | `GET /health` | 無 | 健康檢查 |
 | `GET /i/<date>/<uuid>.jpg` | 無 | R2 圖片服務 |
-| `POST /issue-mcp-key` | Firebase ID token | hub 會員領 mk_/vk_ key（綁 uid，用時讀 live tier） |
+| `POST /issue-mcp-key` | 選配 Firebase ID token | 啟用 Firebase 整合時由會員領 mk_/vk_ key（綁 uid，用時讀 live tier） |
 | `GET /me` | 同上（可選） | 回 `{tier, email, uid, loggedIn}` |
 | `GET /sse` `GET /mcp` | key | MCP SSE 開流 |
 | `POST /mcp` `/mcp/messages` `/sse` | key | MCP JSON-RPC（tools: `generate_image`→job_id、`check_job`→首呼同步生成回 URL） |
-| ~~`POST /register`~~ | — | **已停用**（email 自助發 key 繞過 hub，2026-06-08 關），會員一律 Google 登入 |
+| ~~`POST /register`~~ | — | **已停用**（email 自助發 key 已關閉），會員登入改由選配 Firebase 整合處理 |
 
 Cron `0 17 * * *`（UTC）：R2 清理，保留 `RETENTION_DAYS=7` 天；`examples/` 前綴永不清（wrangler config + src/storage.js）。
 
 ## 3. 認證與分級（src/auth.js）
 
 `resolveTier` 判定順序：
-1. `Authorization: Bearer <JWT非mk_/vk_>` → 驗 Firebase ID token → 讀 hub live tier（guest 降匿名）
-2. `X-API-Key` / `Bearer mk_|vk_...` / `?key=` → KV `key:<apikey>` → 有 `uid` 讀 hub live tier；無 uid 用 `rec.tier`
+1. `Authorization: Bearer <JWT非mk_/vk_>` → 若啟用 Firebase，依部署設定驗證 ID token → 讀 live tier（guest 降匿名）
+2. `X-API-Key` / `Bearer mk_|vk_...` / `?key=` → KV `key:<apikey>` → 有 `uid` 讀 Firebase live tier；無 uid 用 `rec.tier`
 3. 皆無 → 匿名
 
 KV key record 格式：`key:<apikey>` → `{"tier":"member"|"vip","label":"...","uid"?:...}`
 
-| tier | 每日額度（`TIER_QUOTA`） | 16:9 解析度（`SIZES`） | 附加限制 |
+| tier | 每日額度（`TIER_QUOTA`） | 16:9 版型目標（`SIZES`） | 附加限制 |
 |---|---|---|---|
 | anonymous | 不計日額 | 512×288 | **僅同站**（sameSite：Origin host === request host）+ 每 IP 冷卻 `ANON_COOLDOWN` 5 分鐘 1 張 |
 | member (mk_) | 20 | 1280×720 | |
 | vip (vk_) | 50 | 1280×720（**刻意不給 FHD**，太燒 neuron，差異只在張數） |
 | pipeline 專用 | 走 vip key（`vk_news_*`，label=news-pipeline） | 同 vip | 種 key 必帶 `--remote` |
 
-日額 key：`count:<id>:<YYYY-MM-DD>`，TTL 172800s。1:1=720×720（縮圖 512²）、4:5=512×640、draft 4:5=256×320。
+日額 key：`count:<id>:<YYYY-MM-DD>`，TTL 172800s。1:1=720×720（縮圖 512²）、4:5=512×640、draft 4:5=256×320；這些是版型／政策目標，不是 FLUX.1-schnell 的原生 width/height 輸入。
 
 ## 4. 生圖引擎（src/expander.js + src/ai.js）
 
@@ -65,7 +61,7 @@ news-* 特例（2026-07-17）：
 - **FLUX schnell 無負面提示能力（CFG=1）**：suffix 全正面描述；寫「no text/banners」反而誘發亂碼。subject 點名有刻字建物仍會生亂碼字（已接受的取捨：遠景小亂碼換強構圖）
 
 `/generate` 請求：`{intent}` 或 `{style, subject}` + 可選 `ratio`("16:9"|"1:1"|"4:5")、`quality`("standard"|"draft")
-回應：`{ok:true, image_url, style, width, height, steps, quality, flux_prompt, subject}`
+回應：`{ok:true, image_url, style, width, height, steps, quality, flux_prompt, subject}`；`width`／`height` 由回傳圖片 bytes 實測，代表模型實際輸出尺寸。
 
 ## 5. 錯誤契約
 

@@ -1,5 +1,5 @@
-// FluxGate 首頁（自助取 key + 立即試用 + API docs）。無 emoji（依規範，改用 ✓ • 符號）。
-export const PAGE = `<!DOCTYPE html>
+// FluxGate 首頁（部署者 key + 立即試用 + API docs）。無 emoji（依規範，改用 ✓ • 符號）。
+const PAGE_TEMPLATE = `<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
 <meta charset="utf-8">
@@ -97,28 +97,7 @@ export const PAGE = `<!DOCTYPE html>
     </div>
   </div>
 
-  <div class="card">
-    <h2>會員登入</h2>
-    <div id="loggedOut">
-      <p class="hint" style="margin-top:0">用 Google 登入即為會員（720p、每日 20 張），跟 cooperation.tw 其他服務同一個帳號。未登入可在下方試縮圖（512×288，每 5 分鐘 1 張）。VIP（同 720p，每日 50 張，額度較多）請聯絡老師開通。</p>
-      <button id="loginBtn" onclick="window.hubLogin&&window.hubLogin()" style="margin-top:.6rem">使用 Google 登入</button>
-    </div>
-    <div id="loggedIn" style="display:none">
-      <p class="hint" style="margin-top:0">已登入 <b id="meEmail" style="color:var(--text)"></b> · 等級 <b id="meTier" style="color:var(--accent)"></b>
-        <span class="copy2" style="margin-left:.5rem;cursor:pointer" onclick="window.hubLogout&&window.hubLogout()">登出</span></p>
-      <div class="row" style="margin-top:.7rem">
-        <button id="issueBtn" onclick="getMcpKey(this)">領 MCP key（接 claude.ai / Cursor）</button>
-      </div>
-      <div class="keybox" id="keybox">
-        <span style="font-size:.7rem;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:.3rem">claude.ai 連接器 URL（複製整段，貼到 Remote MCP server URL）</span>
-        <span id="keyval"></span><span class="copy" onclick="copyKey(this)">複製整段</span>
-        <div style="margin-top:.7rem;padding-top:.6rem;border-top:1px solid var(--border);font-size:.74rem;color:var(--muted)">
-          REST API 用的 key（X-API-Key）：<code id="rawkey" style="color:var(--text)"></code>
-          <span class="copy2" style="margin-left:.5rem" onclick="copyRaw(this)">複製 key</span>
-        </div>
-      </div>
-    </div>
-  </div>
+  <!-- AUTH_PANEL -->
 
   <div class="card">
     <h2>立即試用</h2>
@@ -409,20 +388,71 @@ async function gen(){
 }
 </script>
 
-<script type="module">
+<!-- FIREBASE_AUTH_SCRIPT -->
+</body>
+</html>`;
+
+const MANUAL_KEY_PANEL = `
+  <div class="card">
+    <h2>部署者連線</h2>
+    <p class="hint" style="margin-top:0">FluxGate 不需要 Firebase 也能運作。部署並填好 KV namespace id 後，在 repo 根目錄執行下列指令；它會把 key 直接寫入遠端 KV，並只在終端機顯示一次。</p>
+    <pre>node scripts/issue-key.mjs --label "your-name" --tier member --config wrangler.jsonc</pre>
+    <p class="hint">把輸出的 key 放入 REST 的 <code>X-API-Key</code>，或組成 <code>&lt;your-worker-url&gt;/sse?key=&lt;key&gt;</code> 給 MCP client。請自行保存；FluxGate 不會再次顯示完整 key。</p>
+  </div>`;
+
+const FIREBASE_KEY_PANEL = `
+  <div class="card">
+    <h2>登入與部署者連線</h2>
+    <div id="loggedOut">
+      <p class="hint" style="margin-top:0">Firebase 登入是選配擴充。未登入可在下方試用縮圖；登入後依你的 Firebase／Firestore 設定使用會員額度。若不使用 Firebase，仍可用 repo 內的 key CLI：</p>
+      <pre>node scripts/issue-key.mjs --label "your-name" --tier member --config wrangler.jsonc</pre>
+      <button id="loginBtn" onclick="window.firebaseLogin&&window.firebaseLogin()" style="margin-top:.6rem">使用 Firebase 登入</button>
+    </div>
+    <div id="loggedIn" style="display:none">
+      <p class="hint" style="margin-top:0">已登入 <b id="meEmail" style="color:var(--text)"></b> · 等級 <b id="meTier" style="color:var(--accent)"></b>
+        <span class="copy2" style="margin-left:.5rem;cursor:pointer" onclick="window.firebaseLogout&&window.firebaseLogout()">登出</span></p>
+      <div class="row" style="margin-top:.7rem">
+        <button id="issueBtn" onclick="getMcpKey(this)">領 MCP key（接 claude.ai / Cursor）</button>
+      </div>
+      <div class="keybox" id="keybox">
+        <span style="font-size:.7rem;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:.3rem">claude.ai 連接器 URL（複製整段，貼到 Remote MCP server URL）</span>
+        <span id="keyval"></span><span class="copy" onclick="copyKey(this)">複製整段</span>
+        <div style="margin-top:.7rem;padding-top:.6rem;border-top:1px solid var(--border);font-size:.74rem;color:var(--muted)">
+          REST API 用的 key（X-API-Key）：<code id="rawkey" style="color:var(--text)"></code>
+          <span class="copy2" style="margin-left:.5rem" onclick="copyRaw(this)">複製 key</span>
+        </div>
+      </div>
+    </div>
+  </div>`;
+
+export function parseFirebaseConfig(env = {}) {
+  let config = env.FIREBASE_CONFIG;
+  if (typeof config === "string" && config.trim()) {
+    try { config = JSON.parse(config); } catch { return null; }
+  }
+  if (!config || typeof config !== "object" || Array.isArray(config)) {
+    config = {
+      apiKey: env.FIREBASE_API_KEY,
+      authDomain: env.FIREBASE_AUTH_DOMAIN,
+      projectId: env.FIREBASE_PROJECT_ID,
+    };
+  }
+  const required = ["apiKey", "authDomain", "projectId"];
+  if (required.some((key) => typeof config[key] !== "string" || !config[key].trim())) return null;
+  return Object.fromEntries(required.map((key) => [key, config[key].trim()]));
+}
+
+function firebaseAuthScript(config) {
+  const serialized = JSON.stringify(config).replace(/</g, "\\u003c");
+  return `<script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-// cooperation-hub 會員中樞（Firebase web config 為公開值，安全靠 Firestore rules）
-const app = initializeApp({
-  apiKey: ['AIza','SyCgCdmBYX-XYM9LmOA9Mk9M-WdxzLDS2QI'].join(''),  // Firebase web key 公開值；切割避 pre-commit 誤報
-  authDomain: 'cooperation-hub-bfe79.firebaseapp.com',
-  projectId: 'cooperation-hub-bfe79',
-});
+const app = initializeApp(${serialized});
 const auth = getAuth(app);
 let fbUser = null;
 window.getToken = async () => fbUser ? await fbUser.getIdToken() : null;
-window.hubLogin = () => signInWithPopup(auth, new GoogleAuthProvider()).catch(e => alert('登入失敗：' + e.message));
-window.hubLogout = () => signOut(auth);
+window.firebaseLogin = () => signInWithPopup(auth, new GoogleAuthProvider()).catch(e => alert('登入失敗：' + e.message));
+window.firebaseLogout = () => signOut(auth);
 onAuthStateChanged(auth, async (user) => {
   fbUser = user;
   const inEl = document.getElementById('loggedIn'), outEl = document.getElementById('loggedOut');
@@ -431,13 +461,19 @@ onAuthStateChanged(auth, async (user) => {
       const tok = await user.getIdToken();
       const me = await fetch('/me', { headers: { Authorization: 'Bearer ' + tok } }).then(r => r.json());
       document.getElementById('meEmail').textContent = user.email;
-      document.getElementById('meTier').textContent = (me.tier === 'vip' ? 'VIP（720p・額度較多）' : me.tier === 'member' ? '會員（720p）' : me.tier);
+      document.getElementById('meTier').textContent = (me.tier === 'vip' ? 'VIP' : me.tier === 'member' ? '會員' : me.tier);
     } catch (e) { document.getElementById('meEmail').textContent = user.email; }
     inEl.style.display = 'block'; outEl.style.display = 'none';
   } else {
     inEl.style.display = 'none'; outEl.style.display = 'block';
   }
 });
-</script>
-</body>
-</html>`;
+</script>`;
+}
+
+export function renderPage(env = {}) {
+  const config = parseFirebaseConfig(env);
+  return PAGE_TEMPLATE
+    .replace("<!-- AUTH_PANEL -->", config ? FIREBASE_KEY_PANEL : MANUAL_KEY_PANEL)
+    .replace("<!-- FIREBASE_AUTH_SCRIPT -->", config ? firebaseAuthScript(config) : "");
+}

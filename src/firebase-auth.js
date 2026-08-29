@@ -1,8 +1,21 @@
-// 驗證 cooperation-hub 的 Firebase ID token（RS256 JWT 對 Google 公鑰 JWK）。純 Web Crypto，無 SA、無依賴。
-const HUB_PROJECT = "cooperation-hub-bfe79";
+// 驗證部署者設定的 Firebase ID token（RS256 JWT 對 Google 公鑰 JWK）。純 Web Crypto，無 SA、無依賴。
 const JWK_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
 
 let jwkCache = { keys: null, exp: 0 };
+
+// Firebase is optional. Support both Cloudflare split vars and a JSON public config.
+export function firebaseProjectId(env = {}) {
+  if (typeof env.FIREBASE_PROJECT_ID === "string" && env.FIREBASE_PROJECT_ID.trim()) {
+    return env.FIREBASE_PROJECT_ID.trim();
+  }
+  if (typeof env.FIREBASE_CONFIG === "string" && env.FIREBASE_CONFIG.trim()) {
+    try {
+      const projectId = JSON.parse(env.FIREBASE_CONFIG).projectId;
+      if (typeof projectId === "string" && projectId.trim()) return projectId.trim();
+    } catch { /* optional public config is invalid or not configured */ }
+  }
+  return null;
+}
 
 function b64urlBytes(s) {
   s = s.replace(/-/g, "+").replace(/_/g, "/");
@@ -25,7 +38,7 @@ async function getJwks() {
 }
 
 // 回 {uid, email, name} 或 null（驗證失敗）
-export async function verifyIdToken(token) {
+export async function verifyIdToken(token, projectId) {
   if (!token || token.split(".").length !== 3) return null;
   let header, payload;
   try {
@@ -35,8 +48,9 @@ export async function verifyIdToken(token) {
   } catch { return null; }
   if (header.alg !== "RS256") return null;
   const now = Math.floor(Date.now() / 1000);
-  if (payload.aud !== HUB_PROJECT) return null;
-  if (payload.iss !== `https://securetoken.google.com/${HUB_PROJECT}`) return null;
+  if (typeof projectId !== "string" || !projectId.trim()) return null;
+  if (payload.aud !== projectId) return null;
+  if (payload.iss !== `https://securetoken.google.com/${projectId}`) return null;
   if (!payload.sub || payload.exp <= now || payload.iat > now + 300) return null;
 
   const jwk = (await getJwks()).find((k) => k.kid === header.kid);

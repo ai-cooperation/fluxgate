@@ -12,6 +12,7 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
+    "issue-key": "node scripts/issue-key.mjs",
     "tail": "wrangler tail --format=pretty",
     "test": "node --test"
   },

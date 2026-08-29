@@ -5,7 +5,7 @@
 // key 資料存 KV：key:<apikey> -> {"tier":"member","label":"..."}
 // 計數：count:<id>:<YYYY-MM-DD>（TTL 2 天）；匿名冷卻：cool:<ip>（TTL 300s）
 
-import { verifyIdToken } from "./firebase-auth.js";
+import { firebaseProjectId, verifyIdToken } from "./firebase-auth.js";
 import { getMemberTier } from "./firestore.js";
 
 export const TIER_QUOTA = { anonymous: 0, member: 20, vip: 50 };
@@ -14,7 +14,7 @@ const ANON_COOLDOWN = 300; // 秒
 const today = () => new Date().toISOString().slice(0, 10);
 
 // 解析來訪者 tier + 計數 id。
-//   web 登入 → Authorization Bearer = Firebase ID token → 驗證 + 讀 hub tier
+//   web 登入 → Authorization Bearer = Firebase ID token → 驗證 + 讀選配的 Firebase tier
 //   MCP/REST → X-API-Key / Bearer mk_|vk_ / ?key= → KV 查 tier
 //   皆無 → 匿名
 export async function resolveTier(request, env) {
@@ -26,12 +26,12 @@ export async function resolveTier(request, env) {
 
   // 1) Firebase ID token（web 登入）：是 JWT 且非 mk_/vk_
   if (bearer && bearer.split(".").length === 3 && !/^[mv]k_/.test(bearer)) {
-    const u = await verifyIdToken(bearer);
+    const u = await verifyIdToken(bearer, firebaseProjectId(env));
     if (u) {
       let tier = "member";
       try { tier = await getMemberTier(env, u.uid); } catch { tier = "member"; }
       if (tier === "guest") tier = "anonymous"; // 被擋 → 等同匿名（縮圖）
-      return { tier, id: `uid:${u.uid}`, uid: u.uid, email: u.email, ip, via: "hub" };
+      return { tier, id: `uid:${u.uid}`, uid: u.uid, email: u.email, ip, via: "firebase" };
     }
   }
   // 2) API key（MCP / REST）：mk_ / vk_
@@ -39,12 +39,12 @@ export async function resolveTier(request, env) {
   if (key) {
     let rec = null;
     try { rec = await env.KV.get(`key:${key}`, "json"); } catch { /* ignore */ }
-    // hub 簽發的 key（綁 uid）→ 讀 live tier（VIP 過期/被降即時反映），用量/額度按 uid
+    // Firebase 簽發的 key（綁 uid）→ 讀 live tier（VIP 過期/被降即時反映），用量/額度按 uid
     if (rec?.uid) {
       let tier = rec.tier || "member";
       try { tier = await getMemberTier(env, rec.uid); } catch { /* 失敗用 rec.tier */ }
       if (tier === "guest") tier = "anonymous";
-      return { tier, id: `uid:${rec.uid}`, ip, key, uid: rec.uid, email: rec.email, via: "hub-key" };
+      return { tier, id: `uid:${rec.uid}`, ip, key, uid: rec.uid, email: rec.email, via: "firebase-key" };
     }
     // 手動派發的 key（無 uid）→ rec.tier
     const tier = rec?.tier && rec.tier in TIER_QUOTA && rec.tier !== "anonymous" ? rec.tier : "anonymous";

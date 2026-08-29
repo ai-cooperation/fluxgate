@@ -16,6 +16,13 @@
   // Daily cleanup. Normal generated image keys use YYYY-MM-DD/... and expire.
   // Homepage example images under examples/... are not date-prefixed and are retained.
   "triggers": { "crons": ["0 17 * * *"] },
-  "vars": { "RETENTION_DAYS": "7" },
+  "vars": {
+    "RETENTION_DAYS": "7",
+    // Optional public Firebase web config. Leave blank for a Firebase-free deployment.
+    "FIREBASE_API_KEY": "",
+    "FIREBASE_AUTH_DOMAIN": "",
+    "FIREBASE_PROJECT_ID": "",
+    "FIREBASE_CONFIG": ""
+  },
   "observability": { "enabled": true }
 }
